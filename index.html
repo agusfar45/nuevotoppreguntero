@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Examen - Contratos (por bloques)</title>
+    <style>
+        :root {
+            --bg: #fff5f7;
+            --card-bg: #ffffff;
+            --text: #4a2c3e;
+            --text-secondary: #7d5a6b;
+            --primary: #d63384;
+            --primary-hover: #b82a6f;
+            --success: #20c997;
+            --danger: #e5536b;
+            --warning: #f7c948;
+            --border: #f2d0dc;
+            --shadow: 0 4px 20px rgba(214, 51, 132, 0.08);
+            --progress-bg: #f8d5e3;
+            --option-bg: #fffafc;
+            --option-hover: #ffe6f0;
+            --selected-bg: #ffe6f0;
+            --selected-border: #d63384;
+            --correct-bg: #e6f9f2;
+            --correct-border: #20c997;
+            --incorrect-bg: #ffe6ea;
+            --incorrect-border: #e5536b;
+            --timer-bg: #d63384;
+            --timer-text: #ffffff;
+            --badge-bg: #ffe6f0;
+            --badge-text: #d63384;
+            --nav-btn-bg: #fce4ec;
+            --nav-btn-text: #d63384;
+            --explanation-bg: #fff8e1;
+            --explanation-border: #f7c948;
+            --overlay: rgba(0, 0, 0, 0.4);
+            --modal-bg: #fff;
+            --checkbox-size: 22px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1f1118;
+            --card-bg: #2d1b24;
+            --text: #f0dce5;
+            --text-secondary: #b895a6;
+            --primary: #f06292;
+            --primary-hover: #ec407a;
+            --success: #66d9b8;
+            --danger: #f2848d;
+            --warning: #f7c948;
+            --border: #4a2f3c;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --progress-bg: #4a2f3c;
+            --option-bg: #2d1b24;
+            --option-hover: #3d2532;
+            --selected-bg: #3d2532;
+            --selected-border: #f06292;
+            --correct-bg: #1e4a3b;
+            --correct-border: #66d9b8;
+            --incorrect-bg: #4a2530;
+            --incorrect-border: #f2848d;
+            --timer-bg: #f06292;
+            --timer-text: #ffffff;
+            --badge-bg: #3d2532;
+            --badge-text: #f8bbd0;
+            --nav-btn-bg: #3d2532;
+            --nav-btn-text: #f0dce5;
+            --explanation-bg: #3d2e1c;
+            --explanation-border: #f7c948;
+            --overlay: rgba(0, 0, 0, 0.7);
+            --modal-bg: #2d1b24;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text); min-height: 100vh;
+            transition: background 0.3s, color 0.3s; line-height: 1.6;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .header {
+            width: 100%; background: var(--card-bg); border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 1rem; box-shadow: var(--shadow); position: sticky; top: 0;
+            z-index: 100; transition: background 0.3s;
+        }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+        .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+        .header-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+        .btn {
+            padding: 0.55rem 1.2rem; border: none; border-radius: 10px; cursor: pointer;
+            font-weight: 600; font-size: 0.9rem; transition: all 0.25s; display: inline-flex;
+            align-items: center; gap: 0.4rem; letter-spacing: 0.2px; white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 8px 20px rgba(214,51,132,0.3); transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--option-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { opacity: 0.9; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-icon {
+            width: 40px; height: 40px; padding: 0; border-radius: 50%; display: inline-flex;
+            align-items: center; justify-content: center; font-size: 1.1rem;
+            background: var(--nav-btn-bg); color: var(--nav-btn-text); border: 2px solid transparent;
+        }
+        .btn-icon:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.8rem; border-radius: 8px; }
+
+        .timer-display {
+            background: var(--timer-bg); color: var(--timer-text); padding: 0.45rem 1rem;
+            border-radius: 20px; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;
+            display: flex; align-items: center; gap: 0.4rem; transition: background 0.3s;
+        }
+        .timer-display.warning { animation: pulse 0.8s infinite; color: #ffffff; background: #e5536b; }
+        [data-theme="dark"] .timer-display.warning { background: #e5536b; color: #fff; }
+        @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+
+        .main-container { width: 100%; max-width: 850px; padding: 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
+        .card {
+            background: var(--card-bg); border-radius: 16px; padding: 1.8rem; box-shadow: var(--shadow);
+            border: 1px solid var(--border); transition: all 0.3s; animation: fadeSlideIn 0.4s ease;
+        }
+        @keyframes fadeSlideIn { from{opacity:0;transform:translateY(15px);} to{opacity:1;transform:translateY(0);} }
+        .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.2rem; }
+        .question-badge {
+            background: var(--badge-bg); color: var(--badge-text); padding: 0.35rem 0.9rem;
+            border-radius: 20px; font-weight: 700; font-size: 0.85rem;
+        }
+        .question-type {
+            font-size: 0.8rem; font-weight: 600; background: var(--warning); color: #000;
+            padding: 0.2rem 0.7rem; border-radius: 12px;
+        }
+        .question-text { font-size: 1.15rem; font-weight: 600; margin-bottom: 1.5rem; line-height: 1.5; }
+        .options-list { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+        .option-item {
+            padding: 0.9rem 1.2rem; border-radius: 12px; cursor: pointer; border: 2px solid var(--border);
+            background: var(--option-bg); transition: all 0.2s; font-weight: 500; user-select: none;
+            display: flex; align-items: center; gap: 0.6rem;
+        }
+        .option-item:hover { background: var(--option-hover); border-color: var(--primary); transform: translateX(3px); }
+        .option-item.selected { background: var(--selected-bg); border-color: var(--selected-border); font-weight: 600; }
+        .option-item.correct { background: var(--correct-bg); border-color: var(--correct-border); font-weight: 700; cursor: default; }
+        .option-item.incorrect { background: var(--incorrect-bg); border-color: var(--incorrect-border); font-weight: 700; cursor: default; animation: shake 0.5s; }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-8px);} 50%{transform:translateX(8px);} 75%{transform:translateX(-4px);} }
+        .option-letter {
+            display: inline-block; width: 28px; height: 28px; border-radius: 50%; background: var(--primary);
+            color: #fff; text-align: center; line-height: 28px; font-weight: 700; margin-right: 0.6rem;
+            font-size: 0.85rem; flex-shrink: 0;
+        }
+        .explanation-box {
+            margin-top: 1rem; padding: 1rem; background: var(--explanation-bg);
+            border-left: 4px solid var(--explanation-border); border-radius: 8px; font-size: 0.9rem;
+            color: var(--text); animation: fadeSlideIn 0.4s ease;
+        }
+        .progress-container { width: 100%; margin-bottom: 0.5rem; }
+        .progress-bar-outer { width: 100%; height: 10px; background: var(--progress-bg); border-radius: 10px; overflow: hidden; }
+        .progress-bar-inner { height: 100%; background: var(--primary); border-radius: 10px; transition: width 0.4s ease; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem; }
+        .nav-buttons { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+        .nav-dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .nav-dot {
+            width: 12px; height: 12px; border-radius: 50%; background: var(--progress-bg);
+            cursor: pointer; transition: all 0.2s; border: 2px solid transparent;
+        }
+        .nav-dot.active { background: var(--primary); transform: scale(1.3); }
+        .nav-dot.answered { background: var(--success); border-color: var(--success); }
+        .nav-dot.answered-incorrect { background: var(--danger); border-color: var(--danger); }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1.2rem 0; }
+        .result-card { background: var(--option-bg); border-radius: 12px; padding: 1rem; text-align: center; border: 2px solid var(--border); }
+        .result-value { font-size: 2rem; font-weight: 800; color: var(--primary); }
+        .result-label { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .grade-circle {
+            width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--primary);
+            display: flex; align-items: center; justify-content: center; font-size: 2.5rem;
+            font-weight: 800; color: var(--primary); margin: 0 auto;
+        }
+        .modal-overlay {
+            position: fixed; inset: 0; background: var(--overlay); display: flex;
+            align-items: center; justify-content: center; z-index: 200; animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        .modal {
+            background: var(--modal-bg); border-radius: 16px; padding: 2rem; max-width: 450px;
+            width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: fadeSlideIn 0.3s ease;
+        }
+        .modal h3 { margin-bottom: 1rem; }
+        .modal-buttons { display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+
+        /* Pantalla de selección de bloque */
+        .bloque-container {
+            display: flex; flex-direction: column; align-items: center; gap: 2rem;
+            padding: 3rem 1rem; text-align: center;
+        }
+        .bloque-botones { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; }
+        .btn-bloque {
+            width: 220px; padding: 2rem 1rem; border-radius: 20px; font-size: 1.2rem;
+            font-weight: 700; background: var(--card-bg); border: 2px solid var(--border);
+            color: var(--text); cursor: pointer; transition: all 0.3s;
+            box-shadow: var(--shadow);
+        }
+        .btn-bloque:hover {
+            border-color: var(--primary); background: var(--option-hover);
+            transform: translateY(-5px); box-shadow: 0 12px 30px rgba(214,51,132,0.2);
+        }
+        .btn-bloque .emoji { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+        .bloque-info { color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem; }
+
+        @media (max-width: 600px) {
+            .header { padding: 0.8rem 1rem; }
+            .btn { padding: 0.45rem 0.9rem; font-size: 0.8rem; }
+            .card { padding: 1.2rem; }
+            .question-text { font-size: 1rem; }
+            .btn-bloque { width: 180px; padding: 1.5rem 1rem; }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <header class="header">
+        <div class="header-left">
+            <span class="logo">🌸 Simulador Contratos</span>
+            <span class="timer-display" id="timerDisplay" style="display:none;">
+                ⏱ <span id="timerValue">60:00</span>
+            </span>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline btn-sm" onclick="toggleTimer()" id="btnToggleTimer">⏱ Timer</button>
+            <button class="btn-icon" onclick="toggleTheme()" title="Modo claro/oscuro">🌓</button>
+            <button class="btn btn-outline btn-sm" onclick="nuevoExamen()">🔄 Nuevo examen</button>
+            <button class="btn btn-outline btn-sm" onclick="reiniciarRespuestas()">🗑 Reiniciar</button>
+            <button class="btn btn-success btn-sm" onclick="confirmarCorreccion()">✅ Corregir</button>
+        </div>
+    </header>
+
+    <main class="main-container" id="mainContainer"></main>
+
+    <div class="modal-overlay" id="modalConfirm" style="display:none;">
+        <div class="modal">
+            <h3>⚠️ ¿Corregir examen?</h3>
+            <p>Una vez corregido, no podrás cambiar tus respuestas de este bloque.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-outline" onclick="cerrarModal()">Seguir revisando</button>
+                <button class="btn btn-success" onclick="corregirExamen()">Corregir ahora</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalResultados" style="display:none;">
+        <div class="modal" style="max-width:550px;">
+            <h3 id="resultadosTitulo">📊 Resultados del Bloque</h3>
+            <div id="resultadosContenido"></div>
+            <div class="modal-buttons" id="resultadosBotones">
+                <button class="btn btn-primary" onclick="cerrarModalResultados()">Revisar respuestas</button>
+                <button class="btn btn-outline" id="btnSiguienteBloque" style="display:none;" onclick="siguienteBloque()">▶ Siguiente bloque</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 🚨 BANCO DE PREGUNTAS - DERECHO DE CONTRATOS (95 preguntas)
+        // ============================================
+        const bancoPreguntas = [    
+            {
+                pregunta: "Contrato de adhesión: Determine en el siguiente ejemplo de qué clase de cláusula abusiva se trata: “Cláusula por la cual se libera de la obligación de custodia al propietario del estacionamiento de automotores”",
+                opciones: [
+                    "Desnaturalizan la obligación del predisponente",
+                    "Amplían los derechos del predisponente",
+                    "Estipulaciones sorpresivas en virtud de su contenido"
+                ],
+                correcta: "Desnaturalizan la obligación del predisponente"
+            },
+            {
+                pregunta: "En la venta domiciliaria prevista por ley de defensa al consumidor",
+                opciones: [
+                    "El consumidor puede revocar su aceptación durante el plazo de siete días hábiles, contados a partir de la entrega de la cosa o de la ejecución del contrato, pero deberá pagar los daños y perjuicios que ocasione",
+                    "El consumidor puede revocar su aceptación durante el plazo de diez días corridos, contados a partir de la celebración del contrato o de la entrega de la cosa, lo último que ocurra; sin responsabilidad alguna",
+                    "El contrato puede ser celebrado por escrito, verbalmente o por signos inequívocos y no existe facultad de revocar la aceptación"
+                ],
+                correcta: "El consumidor puede revocar su aceptación durante el plazo de diez días corridos, contados a partir de la celebración del contrato o de la entrega de la cosa, lo último que ocurra; sin responsabilidad alguna"
+            },
+            {
+                pregunta: "“Ramón realiza tratativas con Daniel para vender un inmueble de su propiedad conviniendo que el precio sería de $2.000.000, pagadero en un plazo de 24 meses y que en el lugar el comprador instalaría un supermercado. Aunque no firmaron instrumento alguno, Daniel entregó al vendedor la primer cuota e ingresó al local para hacer arreglos” ¿Quedó perfeccionado el contrato?",
+                opciones: [
+                    "El contrato no se perfeccionó por cuanto, no hubo oferta y aceptación concreta, por ambas partes",
+                    "El contrato no se perfeccionó por cuanto si bien hubo tratativas contractuales, el acuerdo no se plasmó por escrito",
+                    "El contrato se perfeccionó por la conducta de las partes, suficiente para perfeccionar el acuerdo"
+                ],
+                correcta: "El contrato se perfeccionó por la conducta de las partes, suficiente para perfeccionar el acuerdo"
+            },
+            {
+                pregunta: "Determine qué clase de incapacidad para contratar se manifiesta en el siguiente caso: “La prohibición de que las personas incapaces de contratar todo tipo de actos jurídicos, respecto de los bienes de las personas incapaces o con capacidad restringida bajo su representación”",
+                opciones: [
+                    "Capacidad restringida",
+                    "Incapacidad de derecho",
+                    "Incapacidad de hecho"
+                ],
+                correcta: "Incapacidad de derecho"
+            },
+            {
+                pregunta: "Formación del consentimiento. Miguel (quien vive en Buenos Aires) le envía a Fausto (quien vive en Salta) una oferta el 3 de diciembre. Fausto la recibe el 5 de diciembre y acepta. El 6 de diciembre le envía a Miguel su aceptación. Miguel recibe la aceptación el 9 de diciembre.¿Cuándo se perfeccionó el contrato?",
+                opciones: [
+                    "Cuando Miguel recibe la aceptación de Fausto (9 de diciembre)",
+                    "Cuando Fausto envía a Miguel su aceptación (6 de diciembre)",
+                    "Cuando Fausto acepta (5 de diciembre)"
+                ],
+                correcta: "Cuando Miguel recibe la aceptación de Fausto (9 de diciembre)"
+            },
+            {
+                pregunta: "Conforme al nuevo C y C, ¿qué efectos produce la resolución contractual que tiene como causa el cumplimiento de una condición resolutoria?",
+                opciones: [
+                    "Solo produce efectos futuros",
+                    "Es como si nunca se hubiere celebrado el contrato",
+                    "Tiene efecto retroactivo desde el momento de la celebración del negocio jurídico"
+                ],
+                correcta: "Tiene efecto retroactivo desde el momento de la celebración del negocio jurídico"
+            },
+            {
+                pregunta: "¿En qué consisten las tratativas contractuales?",
+                opciones: [
+                    "Constituyen diálogos, intercambios de información y evaluaciones de factibilidad preliminares que preceden a la asunción de obligaciones contractuales y permiten a los negociantes establecer los términos del contrato que procuran celebrar. Se asientan sobre los principios de la libre negociación, la buena fe y la confidencialidad.",
+                    "Solo tienen fuerza obligatoria en el caso de tener todos los elementos de la oferta",
+                    "Su finalidad es la de posibilitar el avance hacia la concreción del contrato definitivo. Deben contener el acuerdo sobre los elementos esenciales particulares que identifiquen el contrato futuro, su duración y su plazo de vigencia es de un año o el menor que convengan las partes, quienes pueden renovarlo a su vencimiento."
+                ],
+                correcta: "Constituyen diálogos, intercambios de información y evaluaciones de factibilidad preliminares que preceden a la asunción de obligaciones contractuales y permiten a los negociantes establecer los términos del contrato que procuran celebrar. Se asientan sobre los principios de la libre negociación, la buena fe y la confidencialidad."
+            },
+            {
+                pregunta: "La teoría de la imprevisión como un remedio jurídico procede en:",
+                opciones: [
+                    "Cualquier contrato oneroso o gratuito",
+                    "Contratos conmutativos de ejecución continuada o diferida onerosos",
+                    "Contratos onerosos de ejecución inmediata o de ejecución única"
+                ],
+                correcta: "Contratos conmutativos de ejecución continuada o diferida onerosos"
+            },
+            {
+                pregunta: "En el caso de los contratos conexos, ¿cómo deben interpretarse?",
+                opciones: [
+                    "Protegiendo al vulnerable",
+                    "Conforme a su función económica y el resultado perseguido",
+                    "En sentido contrario a la parte predisponente"
+                ],
+                correcta: "Conforme a su función económica y el resultado perseguido"
+            },
+            {
+                pregunta: "En la ley de Defensa del consumidor, ¿qué se entiende por daño directo?",
+                opciones: [
+                    "Todo perjuicio o menoscabo al derecho del usuario o consumidor, susceptible de apreciación pecuniaria, ocasionado de manera MEDIATA sobre sus bienes o sobre su persona, como consecuencia de la acción u omisión del proveedor de bienes o prestador de servicios",
+                    "Todo perjuicio que no tenga justificación alguna",
+                    "Todo perjuicio o menoscabo al derecho del usuario o consumidor, susceptible de apreciación pecuniaria, ocasionado de manera INMEDIATA sobre sus bienes o sobre su persona, como consecuencia de la acción u omisión del proveedor de bienes o prestador de servicios"
+                ],
+                correcta: "Todo perjuicio o menoscabo al derecho del usuario o consumidor, susceptible de apreciación pecuniaria, ocasionado de manera INMEDIATA sobre sus bienes o sobre su persona, como consecuencia de la acción u omisión del proveedor de bienes o prestador de servicios"
+            },
+            {
+                pregunta: "Efecto de los contratos: Límites legales a la fuerza obligatoria de los contratos",
+                opciones: [
+                    "La lesión subjetiva objetiva",
+                    "La teoría de los actos propios",
+                    "La teoría de la apariencia"
+                ],
+                correcta: "La lesión subjetiva objetiva"
+            },
+            {
+                pregunta: "Determine en el siguiente ejemplo a qué clase de causa se refiere y que consecuencias trae aparejada: “Luis promete a su Contador una retribución porcentual sobre el monto de impuestos que se ahorre su empresa”",
+                opciones: [
+                    "Causa ilícita, por lo cual genera una nulidad absoluta",
+                    "Causa ilícita, que genera una nulidad relativa",
+                    "Causa licita, por ende, el negocio jurídico es válido"
+                ],
+                correcta: "Causa ilícita, por lo cual genera una nulidad absoluta"
+            },
+            {
+                pregunta: "Determine en el siguiente caso: ¿Cuál sería el marco jurídico o sistema de normas que aplicaría en la especie?- “Pedro, el 4 de diciembre de 2021, circulaba a bordo de su automóvil junto con su esposa Delia, y sus dos hijos, por la autopista Panamericana (Bs As.), cuando se hallaba por cruzar el peaje por la línea del telepase, por razones que desconoce, la apertura de la barrera no funcionó lo que provocó que frene súbitamente, y quien circulaba detrás suyo lo embistiera fuertemente la parte trasera del rodado provocando daños de consideración al vehículo y a su familia”.",
+                opciones: [
+                    "Ley 24.240 y 26.361",
+                    "C.C y C.",
+                    "Ley 24.240 y su modif.,C.N. y C.C. y C."
+                ],
+                correcta: "Ley 24.240 y su modif.,C.N. y C.C. y C."
+            },
+            {
+                pregunta: "Determine qué clase de incapacidad para contratar se manifiesta en el siguiente caso: “La prohibición o impedimento que pesa de celebrar contrato de comodato entre tutores y curadores, respecto de los bienes de las personas incapaces o con capacidad restringida bajo su representación”",
+                opciones: [
+                    "Capacidad restringida",
+                    "Incapacidad de derecho",
+                    "Incapacidad de ejercicio"
+                ],
+                correcta: "Incapacidad de derecho"
+            },
+            {
+                pregunta: "Determine en el siguiente ejemplo a qué clase de causa se refiere y que consecuencias trae aparejado: “Pedro promete a su Contador una retribución porcentual sobre el monto de impuestos que se ahorre su empresa”",
+                opciones: [
+                    "Causa licita, por ende, el negocio jurídico es válido",
+                    "Causa ilícita, que genera una nulidad relativa",
+                    "Causa ilícita, por lo cual genera una nulidad absoluta"
+                ],
+                correcta: "Causa ilícita, por lo cual genera una nulidad absoluta"
+            },
+            {
+                pregunta: "Contrato es el acto jurídico mediante el cual dos o más partes manifiestan su consentimiento para crear, regular, modificar, transferir o extinguir relaciones jurídicas patrimoniales. ¿Cuáles son sus elementos estructurales?",
+                opciones: [
+                    "sujetos, objeto y causa",
+                    "sujetos, objeto y consentimiento",
+                    "objeto, consentimiento y causa"
+                ],
+                correcta: "objeto, consentimiento y causa"
+            },
+            {
+                pregunta: "Determine en la siguiente situación si existe responsabilidad y en su caso identifíquela “Antes de la formación de la oferta, etapa de proyecto de obra de arquitectos, ocurre un apartamiento indebido e injustificado de las negociaciones de estos últimos.",
+                opciones: [
+                    "El deber de lealtad y corrección frente a la otra dura todo el íter contractual y por dicha razón se proyecta la responsabilidad aun después de concluidas las obligaciones esenciales",
+                    "No surge responsabilidad alguna porque no se formalizo la oferta",
+                    "Surge responsabilidad precontractual, y en virtud de ello, los gastos de las partes deben serles resarcidos, con fundamento en que se han contrariado las obligaciones emergentes de la buena fe, siempre, que se haya generado previamente una confianza razonable en orden a la conclusión del contrato."
+                ],
+                correcta: "Surge responsabilidad precontractual, y en virtud de ello, los gastos de las partes deben serles resarcidos, con fundamento en que se han contrariado las obligaciones emergentes de la buena fe, siempre, que se haya generado previamente una confianza razonable en orden a la conclusión del contrato."
+            },
+            {
+                pregunta: "Cláusula abusiva en medicina prepaga “La prestadora de un servicio de medicina prepaga alega, ante el aumento estrepitoso de los servicios de salud, que no puede cubrir una determinada práctica médica solicitada por uno de sus afiliados, invocando la teoría de la imprevisión contemplada en el art. 1091 del C.C. y C.”",
+                opciones: [
+                    "No se puede considerar cláusula abusiva por cuanto al momento de la celebración del contrato de adhesión, las partes no tuvieron ni pudieron tener presente los aumentos excesivos de la práctica médica prescrita",
+                    "No se puede considerar como cláusula abusiva y es procedente la aplicación de la teoría de la imprevisión alegada por la prepaga, por la excesiva onerosidad sobreviniente, ajena a las partes.",
+                    "Se debe considerar como cláusula abusiva, cuando el disfrute de dicho derecho se encuentra en el marco de un contrato de medicina prepaga realizado por adhesión a cláusulas predispuestas, además de no estar pactadas originariamente o limitar la responsabilidad en las prácticas médicas contratadas."
+                ],
+                correcta: "Se debe considerar como cláusula abusiva, cuando el disfrute de dicho derecho se encuentra en el marco de un contrato de medicina prepaga realizado por adhesión a cláusulas predispuestas, además de no estar pactadas originariamente o limitar la responsabilidad en las prácticas médicas contratadas."
+            },
+            {
+                pregunta: "¿Si la oferta fuese hecha a persona no presente, formulada con el auxilio de la tecnología, y sin plazo es válida y mantiene su vigencia?",
+                opciones: [
+                    "Es oportuna la aceptación que llega diez (10) días después por carta.",
+                    "Es válida la oferta y su plazo comienza a contarse desde que la oferta es remitida al aceptante.",
+                    "Mientras pueda esperarse razonablemente la recepción de la respuesta, teniendo en cuenta las circunstancias y la rapidez de los medios de comunicación empleados por el oferente."
+                ],
+                correcta: "Mientras pueda esperarse razonablemente la recepción de la respuesta, teniendo en cuenta las circunstancias y la rapidez de los medios de comunicación empleados por el oferente."
+            },
+            {
+                pregunta: "Efectos del contrato respecto a terceros: “Es procedente extender la condena por incumplimiento del contrato de compraventa de un automóvil, en el caso de que no se haya entregado la documentación habilitante el fabricante, ya que el negocio fue concluido por el comprador y la concesionaria como vendedora, sin que conste en los recibos de pagos la intervención de aquél”",
+                opciones: [
+                    "No es procedente porque el alcance subjetivo del contrato se agotó en actor y concesionaria.",
+                    "Sí es procedente, el fabricante es parte responsable porque debió entregar la documentación habilitante.",
+                    "No es procedente, por los efectos objetivos del contrato."
+                ],
+                correcta: "No es procedente porque el alcance subjetivo del contrato se agotó en actor y concesionaria."
+            },
+            {
+                pregunta: "Cual es la diferencia entre la frustración del fin del contrato y la teoría de la imprevisión",
+                opciones: [
+                    "En la frustración del fin solo se afecta la relación entre valores económicos; en la imprevisión se desvanece la causa fin.",
+                    "En la frustración del fin la prestación puede cumplirse, pero es inútil; en la imprevisión la prestación es útil pero muy gravosa.",
+                    "En la frustración del fin es necesario que concurran imprevisibilidad, inevitabilidad, ajeno al deudor, actual y sobreviniente."
+                ],
+                correcta: "En la frustración del fin la prestación puede cumplirse, pero es inútil; en la imprevisión la prestación es útil pero muy gravosa."
+            },
+            {
+                pregunta: "Determine en el siguiente ejemplo de qué clase de cláusula abusiva se trata: “Cláusula por la cual se libera de la obligación de custodia al propietario del estacionamiento de automotores”",
+                opciones: [
+                    "Amplían los derechos del predisponente.",
+                    "Desnaturalizan la obligación del predisponente.",
+                    "Estipulaciones sorpresivas en virtud de su contenido."
+                ],
+                correcta: "Desnaturalizan la obligación del predisponente."
+            },
+            {
+                pregunta: "Carlos celebra un contrato de larga duración con la sociedad “Sol pleno” para el desarrollo y construcción de un complejo recreativo por el plazo de 10 años. ¿Puede Carlos rescindir el contrato?",
+                opciones: [
+                    "Sí puede, pero debe transcurrir al menos la mitad del plazo contractual y notificar con 60 días de antelación.",
+                    "No se puede rescindir porque el tiempo es esencial para el cumplimiento del objeto.",
+                    "Sí puede, pero debe dar oportunidad razonable de renegociar de buena fe."
+                ],
+                correcta: "Sí puede, pero debe transcurrir al menos la mitad del plazo contractual y notificar con 60 días de antelación."
+            },
+            {
+                pregunta: "Diferencia entre Rescisión y Nulidad “Juan vende a Pedro, por medio de un contrato de compraventa, un inmueble de propiedad de Luciano en la suma de $1.500.000”- Señale que sanción puede solicitar el comprador y cual el propietario:",
+                opciones: [
+                    "El comprador puede solicitar la rescisión y el propietario la nulidad.",
+                    "Comprador y propietario pueden solicitar la nulidad.",
+                    "Comprador y vendedor pueden solicitar la resolución."
+                ],
+                correcta: "El comprador puede solicitar la rescisión y el propietario la nulidad."
+            },
+            {
+                pregunta: "“El Gobierno Municipal de la Ciudad de San Roque (Ctes), a través de su Dirección de Bienes Patrimoniales, procedió a la venta, a favor la de la Expresa “El Sol S A., de un inmueble ubicado dentro del exigido urbano, destinado a plaza pública del Barrio Progreso de dicha localidad, por la suma de $ 2.000.000”- Determine si el contrato de compraventa antes señalado es eficaz y en su caso por qué?",
+                opciones: [
+                    "El contrato es válido, inoponible a tercero adquirente de buena fe.",
+                    "Es válido, pero debe materializarse por escritura pública e inscribirse.",
+                    "Trae aparejada nulidad absoluta por objeto prohibido."
+                ],
+                correcta: "Trae aparejada nulidad absoluta por objeto prohibido."
+            },
+            {
+                pregunta: "Contrato sobre bienes futuros. Determine en los siguientes ejemplos, ¿Qué bienes no pueden ser objeto de los contratos?",
+                opciones: [
+                    "La donación de un inmueble que voy a heredar cuando fallezca mi padre.",
+                    "La venta de un inmueble en avanzado estado de construcción.",
+                    "La donación de un inmueble de mi propiedad."
+                ],
+                correcta: "La donación de un inmueble que voy a heredar cuando fallezca mi padre."
+            },
+            {
+                pregunta: "Si la determinación del objeto ha sido delegada a un tercero, que solución daría al siguiente caso:- “Si el tercero no realiza la elección o ello fuese imposible, por ejemplo, porque el tercero ha fallecido, la determinación a quién corresponde”",
+                opciones: [
+                    "A las partes.",
+                    "Se determina por los Usos y costumbres del lugar.",
+                    "Al juez."
+                ],
+                correcta: "Al juez."
+            },
+            {
+                pregunta: "Promesa del hecho de un tercero: “Un instituto educativo prometió a sus estudiantes graduados el otorgamiento de un título de grado por parte de una Universidad, garantizándole el éxito de la propuesta” ¿El instituto educativo es responsable en caso de no cumplir dicha promesa?",
+                opciones: [
+                    "La responsabilidad de ambos -Instituto y Universidad- es concurrente, ambos deben responder ante la alumna por el incumplimiento contractual",
+                    "No es responsable el instituto, la responsabilidad por daños y perjuicios recae exclusivamente en la Universidad",
+                    "El instituto resulta responsable por daños y perjuicios sufridos por la alumna a quien se le negó la expedición del mentado título, dado que éste, garantizó el éxito de la propuesta"
+                ],
+                correcta: "El instituto resulta responsable por daños y perjuicios sufridos por la alumna a quien se le negó la expedición del mentado título, dado que éste, garantizó el éxito de la propuesta"
+            },
+            {
+                pregunta: "Requisitos para la aplicación de la teoría de la imprevisión",
+                opciones: [
+                    "Se aplica a contratos de ejecución diferida o permanente.",
+                    "Procede su aplicación si el perjudicado hubiere obrado con culpa",
+                    "Se aplica a contratos a título gratuito."
+                ],
+                correcta: "Procede su aplicación si el perjudicado hubiere obrado con culpa"
+            },
+            {
+                pregunta: "Dentro de los contratos preliminares, que entiende por contrato de opción",
+                opciones: [
+                    "Es aquel en el que una de las partes, llamada concedente se obliga a celebrar un contrato futuro, si la otra parte, llamada optante, expresa se voluntad de perfeccionarlo. Una de las partes tiene el derecho irrevocable de aceptar el contrato definitivo",
+                    "No obliga a contratar posteriormente, pero fijan las bases de concertación",
+                    "Contrato preliminar unilateral, en virtud del cual una parte se obliga frente a la otra, a preferirla respecto a otros eventuales interesados en la contratación, para el caso que llegara a decidirse a celebrar el contrato futuro"
+                ],
+                correcta: "Es aquel en el que una de las partes, llamada concedente se obliga a celebrar un contrato futuro, si la otra parte, llamada optante, expresa se voluntad de perfeccionarlo. Una de las partes tiene el derecho irrevocable de aceptar el contrato definitivo"
+            },
+            {
+                pregunta: "El Anatocismo es:",
+                opciones: [
+                    "Una forma de interés compuesto que consiste en el pago de intereses sobre intereses",
+                    "La concesión de ventajas pecuniarias desproporcionadas con su prestación",
+                    "El aprovechamiento de la necesidad, ligereza e inexperiencia por parte de quien pretende obtener ventajas desproporcionadas"
+                ],
+                correcta: "Una forma de interés compuesto que consiste en el pago de intereses sobre intereses"
+            },
+            {
+                pregunta: "Cuando la oferta no es autosuficiente se puede integrar las omisiones con elementos extraños a ella?- Determine si en el siguiente caso, se encuentra integrada la oferta “En una compraventa de cosas muebles no se ha señalado el precio ni expresa ni tácitamente, ni se ha estipulado un medio para determinarlo”",
+                opciones: [
+                    "Determina el valor de la mercaderia la parte vendedora.",
+                    "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio generalmente se cobra, por tales mercaderías, en el momento de cumplimiento del contrato",
+                    "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio generalmente cobrado en el momento de la celebración del contrato para tales mercaderías"
+                ],
+                correcta: "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio generalmente cobrado en el momento de la celebración del contrato para tales mercaderías"
+            },
+            {
+                pregunta: "“Lucio le dona a Valentino un inmueble de su propiedad, ubicado en las afueras de la ciudad de Córdoba, el que lo celebran por instrumento privado con firmas certificadas por Escribano Público”.¿Las partes pueden requerir se satisfaga la forma exigida por la ley, esto es la Escritura Pública, exigida por el C C y C.?",
+                opciones: [
+                    "El contrato vale como en el cual las partes se obligan a cumplir con la formalidad exigida por la ley -Solemnidad relativa",
+                    "Ninguna de las partes puede exigir se satisfaga la forma exigida por la ley, porque la misma es exigida como requisito de validez del negocio -Solemnidad absoluta",
+                    "Las partes están facultadas a escoger libremente la formalidad que crean conveniente Libertad de formas"
+                ],
+                correcta: "Ninguna de las partes puede exigir se satisfaga la forma exigida por la ley, porque la misma es exigida como requisito de validez del negocio -Solemnidad absoluta"
+            },
+            {
+                pregunta: "Como debe interpretarse un contrato de medicina prepaga:",
+                opciones: [
+                    "En beneficio del asociado, que es quien contribuye con su cuota mensual al crecimiento de la institución y constituye la parte más débil",
+                    "En favor del predisponente que es quien diagrama el contenido del negocio",
+                    "Se debe efectuar una interpretación dinámica del acuerdo oneroso"
+                ],
+                correcta: "En beneficio del asociado, que es quien contribuye con su cuota mensual al crecimiento de la institución y constituye la parte más débil"
+            },
+            {
+                pregunta: "Objeto . Juana y Guido firman un contrato cuyo objeto era posible, pero a raíz de una modificación legal, el objeto se tornó jurídicamente imposible por una prohibición del derecho. ¿Qué causal existe?",
+                opciones: [
+                    "Nulidad del contrato.",
+                    "Ineficacia del contrato.",
+                    "Inoponibilidad del contrato."
+                ],
+                correcta: "Ineficacia del contrato."
+            },
+            {
+                pregunta: "El remedio de la conversión del negocio jurídico en el nuevo C. C. y C.",
+                opciones: [
+                    "La conversión del acto no es de aplicación cuando la ley disponga una formalidad relativa",
+                    "No aplica cuando las partes o la ley establezcan pena de nulidad para la falta de respeto a la forma acordada o prevista",
+                    "La conversión del acto no es de aplicación cuando así las partes lo dispongan"
+                ],
+                correcta: "No aplica cuando las partes o la ley establezcan pena de nulidad para la falta de respeto a la forma acordada o prevista"
+            },
+            {
+                pregunta: "Determine en el siguiente caso, si su objeto reúne los requisitos exigidos por el C C. y C y si es procedente el actuar de Pedro.- “Juan vende a Diego un inmueble de su propiedad que se encuentra embargado por la suma de $ 300.000. Celebrado el contrato de compraventa, Diego deposita judicialmente el pago del importe del embargo y solicita el levantamiento de la medida cautelar.”",
+                opciones: [
+                    "El objeto del contrato es viable, el comprador del inmueble si deposita el valor del embargo puede pedir el levantamiento de la cautelar",
+                    "El contrato queda sujeto a condición suspensiva, en razón de que su objeto se encuentra sujeto a una medida cautelar",
+                    "El contrato de compraventa queda sujeto a las resultas del juicio"
+                ],
+                correcta: "El objeto del contrato es viable, el comprador del inmueble si deposita el valor del embargo puede pedir el levantamiento de la cautelar"
+            },
+            {
+                pregunta: "¿Quiénes pueden solicitar la nulidad del contrato de objeto ilícito y quién no, conforme a la sanción que trae aparejada?",
+                opciones: [
+                    "Puede invocar la nulidad la parte que se encuentra perjudicada por el contrato de objeto ilícito",
+                    "Puede articular la nulidad del contrato solo el Ministerio Público",
+                    "Puede alegarse por el Ministerio Público, y por cualquier interesado. No puede pedir que se declare nulo el contrato el que, siendo parte, invoca su propia torpeza"
+                ],
+                correcta: "Puede alegarse por el Ministerio Público, y por cualquier interesado. No puede pedir que se declare nulo el contrato el que, siendo parte, invoca su propia torpeza"
+            },
+            {
+                pregunta: "Señale si en la siguiente situación, si se tipifican los vicios redhibitorios de la cosa - “Héctor adquirió un automotor 0 km en la Concesionaria SOL, el que manifestó desperfectos de mal funcionamiento del airbag y de climatización.”",
+                opciones: [
+                    "No configura un vicio redhibitorio de la cosa, pues los defectos alegados por el actor, no tienen ni pueden tener el efecto de suprimir la utilización del bien, ya que no pueden ser calificados como defectos graves, en función del destino previsto para la cosa adquirida",
+                    "Es un vicio redhibitorio, vicio de hecho, que hace impropia la cosa para su destino o disminuye gravemente su utilidad",
+                    "No configura un vicio redhibitorio de la cosa por cuanto al momento de la tradición no se los pudieron apreciar."
+                ],
+                correcta: "No configura un vicio redhibitorio de la cosa, pues los defectos alegados por el actor, no tienen ni pueden tener el efecto de suprimir la utilización del bien, ya que no pueden ser calificados como defectos graves, en función del destino previsto para la cosa adquirida"
+            },
+            {
+                pregunta: "Conforme al nuevo C C y C. que efectos produce la resolución contractual que tiene como causa al cumplimiento de una condición resolutoria",
+                opciones: [
+                    "Solo produce efectos futuros",
+                    "Es como si nunca se hubiere celebrado el contrato",
+                    "Tiene efecto retroactivo desde el momento de la celebración del negocio jurídico"
+                ],
+                correcta: "Tiene efecto retroactivo desde el momento de la celebración del negocio jurídico"
+            },
+            {
+                pregunta: "Cuando la oferta no es autosuficiente se puede integrar las omisiones con elementos extraños a ella? - Determine si en el siguiente caso se encuentra integrada la oferta \"En una compraventa de cosas muebles no se ha señalado el precio ni expresa ni tácitamente, ni se ha estipulado un medio para determinarlo\"",
+                opciones: [
+                    "Determina el precio a pagar, en el momento de recibir la mercadería, el comprador",
+                    "Determina el valor de la mercadería la parte vendedora",
+                    "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio generalmente se cobra, por tales mercaderías, en el momento de cumplimiento del contrato",
+                    "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio generalmente cobrado en el momento de la celebración del contrato para tales mercaderías"
+                ],
+                correcta: "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio generalmente cobrado en el momento de la celebración del contrato para tales mercaderías"
+            },
+            {
+                pregunta: "“Ramón realizo tratativas con Daniel para venderle un inmueble de su propiedad conviniendo que el precio sería de $20.000.000, pagadero en un plazo de 24 meses y que en el lugar el comprador instalaría un supermercado. Aunque no firmaron instrumento alguno, Daniel entrego al vendedor la primer cuota de $ 2.000.000 e ingreso al local para hacer arreglos”- Quedo perfeccionado el contrato?",
+                opciones: [
+                    "El contrato se perfeccionó por la conducta de las partes, suficiente para perfeccionar el acuerdo",
+                    "El contrato no se perfecciono por cuanto si bien hubo tratativas contractuales, el acuerdo no se plasmó por escrito",
+                    "El contrato no se perfeccionó por cuanto, no hubo oferta y aceptación concreta, por ambas partes"
+                ],
+                correcta: "El contrato se perfeccionó por la conducta de las partes, suficiente para perfeccionar el acuerdo"
+            },
+            {
+                pregunta: "María tiene a su papá Damián internado en un hospital hace varios meses... Damián es titular de un inmueble en Necochea, Provincia de Buenos Aires. María toma la decisión de poner el departamento en venta, sabiendo que a ella no le gusta el clima y el viento de la costa Argentina, ya que los médicos le informaron que la situación de salud de Damián es irreversible e incurable y en un futuro, heredará el inmueble el día que su papá no esté (puesto que es hija única)",
+                opciones: [
+                    "No puede vender. La herencia futura no puede ser objeto de contrato porque se especula con la muerte de una persona.",
+                    "Puede vender solo si subsana la nulidad relativa, otorgando en su expresa conformidad cuando sea la propietaria",
+                    "Puede vender. Damián ahora no puede expresar su consentimiento y María sabe que será la titular en el futuro."
+                ],
+                correcta: "No puede vender. La herencia futura no puede ser objeto de contrato porque se especula con la muerte de una persona."
+            },
+            {
+                pregunta: "Clara se suscribió a un plan de gimnasio por 12 meses en “MEGA-GYM” El plan consiste en un acceso ilimitado de lunes a viernes de 8:00 a 22:00 horas, en todos los gimnasios de la red MEGA-GYM ubicados en el país. Al otro día de comenzar, Clara no pudo realizar la clase de spinning porque la profesora estuvo ausente, pero el gimnasio le dice que se toma como “clase perdida” y que no la puede recuperar. Clara decide utilizar una bicicleta del salón de musculación, pero inmediatamente sufre una lesión porque la cadena de la bicicleta estaba floja y sin aceite. El gimnasio ilustra en sus cláusulas y condiciones que Clara firmó previamente que no se hace responsable por lo ocurrido.... ¿Qué tipo de cláusulas son las que se cuestionan? ¿Cómo se interpretan?",
+                opciones: [
+                    "Son cláusulas de conservación. Si hay duda sobre la eficacia del contrato, o de alguna de sus cláusulas, debe interpretarse en el sentido de darles efecto.",
+                    "Son clausulas válidas eximentes de responsabilidad civil. Es responsabilidad de Clara fijarse que los aparatos estén correctamente funcionando antes de utilizarlos.",
+                    "Son cláusulas abusivas porque desnaturalizan las obligaciones del gimnasio y renuncian o restringen los derechos del adherente."
+                ],
+                correcta: "Son cláusulas abusivas porque desnaturalizan las obligaciones del gimnasio y renuncian o restringen los derechos del adherente."
+            },
+            {
+                pregunta: "Fuerza obligatoria de la oferta: En el caso de oferta entre ausentes sin plazo determinado:",
+                opciones: [
+                    "El oferente queda obligado hasta el momento en que puede razonablemente esperarse la recepción de la respuesta, expedida por los medios usuales de comunicación.",
+                    "La oferta sólo puede ser aceptada inmediatamente. El oferente queda obligado hasta el momento en que el aceptante recibe la oferta.",
+                    "El oferente queda obligado por 30 días corridos, contados desde la fecha de recepción de la oferta."
+                ],
+                correcta: "El oferente queda obligado hasta el momento en que puede razonablemente esperarse la recepción de la respuesta, expedida por los medios usuales de comunicación."
+            },
+            {
+                pregunta: "Tratativas contractuales. Dos instituciones universitarias se encuentran iniciando una negociación para una colaboración académica. Aún no se ha formulado una oferta en concreto, pero ya han intercambiado algunos diálogos, cuestiones, sondeos, averiguaciones e información dirigida a la celebración, acuerdo y perfeccionamiento del contrato. La institución “A” frustra el dialogo de manera injustificada y arbitraria de un día para el otro, sin dar ninguna explicación. La institución “B”, quién destinó mucho tiempo, dinero y recursos en llevar estas tratativas adelante, le consulta a Ud. respecto al accionar de la otra institución:",
+                opciones: [
+                    "Aunque no se haya formulado una oferta, las partes deben obrar de buena fe para no frustrar las tratativas injustificadamente. El incumplimiento de este deber genera la responsabilidad de resarcir el daño que sufra el afectado por haber confiado, sin su culpa, en la celebración del contrato.",
+                    "No existe responsabilidad precontractual de ningún tipo en nuestro ordenamiento jurídico",
+                    "La institución “A” no formuló oferta alguna y por ende tiene derecho a abandonar las tratativas contractuales en cualquier momento. Solo responde si hubiera formulado una oferta en concreto y desiste unilateralmente."
+                ],
+                correcta: "Aunque no se haya formulado una oferta, las partes deben obrar de buena fe para no frustrar las tratativas injustificadamente. El incumplimiento de este deber genera la responsabilidad de resarcir el daño que sufra el afectado por haber confiado, sin su culpa, en la celebración del contrato."
+            },
+            {
+                pregunta: "Cuando se produce la caducidad de la responsabilidad por defectos ocultos si la cosa es mueble?",
+                opciones: [
+                    "A los 6 (seis) meses desde que opero la tradición o se la puso en funcionamiento",
+                    "A los 3 (tres) años desde que se la recibió",
+                    "Al año desde que se la puso en funcionamiento"
+                ],
+                correcta: "A los 6 (seis) meses desde que opero la tradición o se la puso en funcionamiento"
+            },
+            {
+                pregunta: "¿Qué diferencia hay entre la imprevisión y el vicio de lesión?",
+                opciones: [
+                    "La lesión se manifiesta solo en el momento del cumplimiento del contrato y la imprevisión en el momento de su celebración",
+                    "La lesión es endógena y la impresión exógena al contrato",
+                    "La lesión es exógena y la imprevisión endógena al contrato"
+                ],
+                correcta: "La lesión es endógena y la impresión exógena al contrato"
+            },
+            {
+                pregunta: "Contrato de adhesión: \"Esteban celebró con Argentina Seguros S.A. un contrato de adhesión en el que algunas cláusulas predispuestas sobre la cobertura a brindar por la aseguradora, eran equívocas y ofrecían dificultad para precisar el alcance de las obligaciones asumidas por el predisponente\" - Determine en la presente situación problemática que debe prevalecer?",
+                opciones: [
+                    "La interpretación que favorezca a quien contrató con el predisponente, autor de las clausulas uniformes",
+                    "La interpretación que favorezca a quien redactó las clausulas uniforme",
+                    "La interpretación que pretendieron darle las partes"
+                ],
+                correcta: "La interpretación que favorezca a quien contrató con el predisponente, autor de las clausulas uniformes"
+            },
+            {
+                pregunta: "Laura se encuentra en una situación de salud muy grave. Oscar, su esposo, pone a la venta un vehículo que tienen y por la urgencia de la operación de Laura, se lo vende a Sandro por la suma de $400.000 para adquirir los medicamentos y cubrir los gastos post operatorios. A los pocos meses, Laura se recupera de la operación y tras enterarse de lo ocurrido, consulta con un profesional del derecho:",
+                opciones: [
+                    "Laura y Oscar pueden demandar la nulidad o la modificación del contrato porque Sandro se aprovechó de la necesidad de Oscar y obtuvo una ventaja patrimonial evidentemente y desproporcionada",
+                    "Las partes tienen libertad de contratar y libertad de modificar un contrato perfeccionado. Su contenido sólo puede ser modificado o extinguido por acuerdo de partes o en los supuestos en que la ley lo prevé. Para modificar el precio, debe ser de común acuerdo. Laura no puede hacerlo unilateralmente.",
+                    "Todo contrato válidamente celebrado es obligatorio para las partes. Se trata de un contrato de negociación individual y no un contrato de adhesión. Oscar y Sandro acordaron el precio de común acuerdo y nadie obligó a Oscar a vender el vehículo. Por ende, las partes quedan obligadas en uso de su autonomía de la voluntad."
+                ],
+                correcta: "Laura y Oscar pueden demandar la nulidad o la modificación del contrato porque Sandro se aprovechó de la necesidad de Oscar y obtuvo una ventaja patrimonial evidentemente y desproporcionada"
+            },
+            {
+                pregunta: "Que se entiende por efectos relativos de los contratos?",
+                opciones: [
+                    "La limitación de los efectos contractuales a los sujetos contratantes, concerniente a los derechos y obligaciones que derivan del acuerdo.",
+                    "Las convenciones repercuten de distinto modo sobre terceros",
+                    "Las convenciones no repercuten de distinto modo sobre terceros, porque no hacen nacer derechos ni obligaciones"
+                ],
+                correcta: "La limitación de los efectos contractuales a los sujetos contratantes, concerniente a los derechos y obligaciones que derivan del acuerdo."
+            },
+            {
+                pregunta: "En el caso de los contratos conexos como deben interpretarse?",
+                opciones: [
+                    "En sentido contrario a la parte predisponente",
+                    "Conforme a su función económica y el resultado perseguido",
+                    "Protegiendo al vulnerable"
+                ],
+                correcta: "Conforme a su función económica y el resultado perseguido"
+            },
+            {
+                pregunta: "¿Cómo deben interpretarse los contratos conexos?",
+                opciones: [
+                    "Conforme a su función económica y el resultado perseguido",
+                    "En sentido contrario a la parte predisponente",
+                    "Protegiendo a la parte vulnerable"
+                ],
+                correcta: "Conforme a su función económica y el resultado perseguido"
+            },
+            {
+                pregunta: "En que consiste la conversión del negocio jurídico:",
+                opciones: [
+                    "La solución legal de utilizar una declaración incapaz de dar vida a un negocio jurídico por defecto de forma para reconocerle aptitud de engendrar otro negocio jurídico diferente con efectos parcialmente distinto",
+                    "Es el reconocimiento descripto en el art. 1017 del CCYC respecto de la escritura pública",
+                    "Es el principio general que establece que quienes contratan pueden hacerlo sin someterse a formas o solemnidades determinadas"
+                ],
+                correcta: "La solución legal de utilizar una declaración incapaz de dar vida a un negocio jurídico por defecto de forma para reconocerle aptitud de engendrar otro negocio jurídico diferente con efectos parcialmente distinto"
+            },
+            {
+                pregunta: "La responsabilidad por evicción se extiende a:",
+                opciones: [
+                    "Toda turbación de derecho total o parcial que recae sobre el bien, por causa anterior o contemporánea a la adquisición",
+                    "Las turbaciones de hecho causadas por terceros ajenos al transmitente",
+                    "La turbación de derecho proveniente de la ley"
+                ],
+                correcta: "Toda turbación de derecho total o parcial que recae sobre el bien, por causa anterior o contemporánea a la adquisición"
+            },
+            {
+                pregunta: "Se puede declarar la rescisión del contrato por frustración de la finalidad cuando:",
+                opciones: [
+                    "Tenga su causa en una alteración de carácter extraordinario de las circunstancias existentes al momento de su celebración ajena a las partes",
+                    "Cuando las circunstancias extraordinarias provengan del actuar de las partes",
+                    "Cuando se estipulo en el contrato"
+                ],
+                correcta: "Tenga su causa en una alteración de carácter extraordinario de las circunstancias existentes al momento de su celebración ajena a las partes"
+            },
+            {
+                pregunta: "¿El nuevo C C y C. salvo pacto en contrario, sobre qué clase de señal o arras legisla?",
+                opciones: [
+                    "Sobre la seña penitencial que permite el arrepentimiento, desobligando a la parte que lo hace, perdiendo, a su vez lo entregado",
+                    "Sobre la seña que permite el arrepentimiento unilateral",
+                    "Sobre la seña confirmatoria y no acuerda derecho al arrepentimiento, lo que se entrega es a cuenta del precio, está dirigida al cumplimiento de lo prometido."
+                ],
+                correcta: "Sobre la seña confirmatoria y no acuerda derecho al arrepentimiento, lo que se entrega es a cuenta del precio, está dirigida al cumplimiento de lo prometido."
+            },
+            {
+                pregunta: "Determine en los siguientes ejemplos cuál de ellos es un contrato preparatorio normativo:",
+                opciones: [
+                    "Contratos tipos o formularios",
+                    "Los contratos establecidos por las convenciones colectivas de trabajo",
+                    "Venta mediante cupo, arrendamiento forzoso"
+                ],
+                correcta: "Contratos tipos o formularios"
+            },
+            {
+                pregunta: "Juan es un albacea (persona que se encarga de cumplir la voluntad del testador) y adquirió un inmueble del testamento que tiene a su cargo. ¿Quién puede solicitar la nulidad del contrato?",
+                opciones: [
+                    "Puede articular la nulidad del contrato solo el Ministerio Público porque hay una cuestión de orden público.",
+                    "Puede invocar la nulidad la parte que se encuentra perjudicada (herederos)",
+                    "Puede declararse de oficio por el juez, por el Ministerio Público o por cualquier interesado."
+                ],
+                correcta: "Puede declararse de oficio por el juez, por el Ministerio Público o por cualquier interesado."
+            },
+            {
+                pregunta: "Pedro compro una heladera, marca BGH, en Garbarino S A. de la ciudad de Corrientes, abonando la suma de $ 500.000, con una garantía de 6 meses. Tiempo en el cual la heladera sufre un cortocircuito que ocasiona un incendio afectando varios muebles y útiles de la casa de Pedro”. Frente a esta situación corresponde preguntarnos:- La garantía otorgada por la firma comercial es la exigida por la Ley de Defensa del Consumidor 24.240 y modif. teniendo presente que se trata de una cosa mueble no consumible?",
+                opciones: [
+                    "El producto goza de una garantía legal de 6 meses, contados desde la fecha de la compra del mismo",
+                    "El producto goza de garantía legal de 12 meses, contados desde la fecha de compra",
+                    "El producto no goza de garantía legal, pues el desperfecto se debió a un cortocircuito eléctrico"
+                ],
+                correcta: "El producto goza de una garantía legal de 6 meses, contados desde la fecha de la compra del mismo"
+            },
+            {
+                pregunta: "¿Si la oferta fuese hecha a persona no presente, formulada con el auxilio de la tecnología, y sin plazo es válida y mantiene su vigencia?",
+                opciones: [
+                    "Mantiene su vigencia mientras pueda esperarse razonablemente la recepción de la respuesta, teniendo en cuenta las circunstancias, incluso la rapidez de los medios de comunicación empleados por el oferente",
+                    "No es válida una oferta realizada a persona no presente y sin plazo",
+                    "Es válida la oferta y su plazo comienza a contarse desde que la oferta es remitida al aceptante"
+                ],
+                correcta: "Mantiene su vigencia mientras pueda esperarse razonablemente la recepción de la respuesta, teniendo en cuenta las circunstancias, incluso la rapidez de los medios de comunicación empleados por el oferente"
+            },
+            {
+                pregunta: "Nuestro ordenamiento jurídico no exige una forma especial para la celebración del contrato de locación de servicios, razón por la cual rige el principio de libertad de forma consagrado en el art. 974 del C C y C,. En virtud de los antes expuesto, ¿Cómo se prueba dicho negocio jurídico?",
+                opciones: [
+                    "Solo por prueba testimonial o pericial",
+                    "Por prueba documental exclusivamente",
+                    "Por toda clase de elementos de convicción, incluso por testigos y presunciones"
+                ],
+                correcta: "Por toda clase de elementos de convicción, incluso por testigos y presunciones"
+            },
+            {
+                pregunta: "Hugo adquirió un automotor. A los treinta días, Hugo se comunica con el vendedor y le dice que el vehículo tiene desperfectos de mal funcionamiento en la calefacción y en el aire acondicionado. Ud. es el abogado de Hugo y le indica que:",
+                opciones: [
+                    "Se trata de un vicio redhibitorio que hace impropia la cosa para su destino o disminuye gravemente su utilidad.",
+                    "Configura un vicio redhibitorio, pero el comprador ya no puede reclamar al vendedor la reparación del daño o la resolución del contrato porque han transcurrido 30 días corridos desde la recepción del vehículo.",
+                    "No configura un vicio redhibitorio de la cosa, pues los defectos alegados por Hugo no tienen el efecto de suprimir la utilización del bien, ya que no pueden ser calificados como defectos graves en función del destino previsto para la cosa adquirida"
+                ],
+                correcta: "No configura un vicio redhibitorio de la cosa, pues los defectos alegados por Hugo no tienen el efecto de suprimir la utilización del bien, ya que no pueden ser calificados como defectos graves en función del destino previsto para la cosa adquirida"
+            },
+            {
+                pregunta: "En el caso que venimos analizando en la pregunta anterior... “Pedro compro una heladera, marca HBD, Garbarino S A. de la ciudad de Corrientes\"... teniendo presente que el desperfecto sufrido, hace impropia funcionalmente la cosa para su destino, o disminuye su utilidad, a tal extremo que, de haberlo conocido, el adquirente no la hubiera adquirido, o su contraprestación hubiese sido significativamente menor; el comprador puede:",
+                opciones: [
+                    "Reclamar solo indemnización de daños y perjuicios",
+                    "Pedir la sustitución de la cosa adquirida o devolverla, a cambio de recibir el importe abonado y podrá reclamar una indemnización por vía administrativa, si se determina la existencia de un daño directo, susceptible de apreciación pecuniaria, ocasionado de manera inmediata",
+                    "Solicitar se le restituya la cosa en perfecto funcionamiento, conforme la garantía otorgada por el local comercial"
+                ],
+                correcta: "Pedir la sustitución de la cosa adquirida o devolverla, a cambio de recibir el importe abonado y podrá reclamar una indemnización por vía administrativa, si se determina la existencia de un daño directo, susceptible de apreciación pecuniaria, ocasionado de manera inmediata"
+            },
+            {
+                pregunta: "Exprese en el siguiente ejemplo, a qué clase de causa se refiere y que consecuencias trae aparejada: “Pedro promete a su Contador una retribución porcentual sobre el monto de impuestos que se ahorre su empresa”",
+                opciones: [
+                    "Causa ilícita, por lo cual genera una nulidad absoluta, que se protege el orden público",
+                    "Causa ilícita, que genera una nulidad relativa, porque con ello se protege al interés general",
+                    "Causa licita, por ende, el negocio jurídico es válido"
+                ],
+                correcta: "Causa ilícita, por lo cual genera una nulidad absoluta, que se protege el orden público"
+            },
+            {
+                pregunta: "Caso Luisa López: “Luisa López se domicilia en la ciudad de Santa Fe, junto a sus hijos y su progenitor Atilio López, quien es propietario de un inmueble ubicado en la ciudad de Salta, que es donde originariamente vivía Atilio, ante de ir a vivir definitivamente con su única hija. Luisa al ver la casa desocupada, la que se está deteriorando, decide vendérsela a Marcos Pérez, por la suma de $20.000.000 prometiéndosela entregar cuando sea propietaria.” – Señale si dicho contrato de compraventa puede materializarse, ¿por qué, y en su caso qué consecuencias trae aparejada?",
+                opciones: [
+                    "El contrato de compraventa, no es válido, trae aparejada una nulidad ABSOLUTA, pues se trata de un objeto contrario a las normas imperativas.",
+                    "Sí puede materializarse el contrato de compraventa, a pesar de que el objeto es un bien sujeto a una herencia futura, pues se trata de objeto materialmente posible, en efecto el acto jurídico es válido.",
+                    "El contrato de compraventa, no es válido, trae aparejada una nulidad RELATIVA, pues se trata de un objeto contrario a las normas imperativas."
+                ],
+                correcta: "El contrato de compraventa, no es válido, trae aparejada una nulidad ABSOLUTA, pues se trata de un objeto contrario a las normas imperativas."
+            },
+            {
+                pregunta: "Diferencia entre frustración del fin del contrato y teoría de la imprevisión:",
+                opciones: [
+                    "En la frustración del fin solo se afecta la relación entre los valores económicos y en la imprevisión se desvanece la causa fin.",
+                    "En la frustración del fin es necesario que concurran los caracteres de imprevisibilidad, inevitabilidad, ajeno al deudor, actual, sobreviniente.",
+                    "En la frustración del fin la prestación puede cumplirse, pero es inútil; en la imprevisión la excesiva onerosidad sobreviniente es útil pero su cumplimiento es muy gravoso."
+                ],
+                correcta: "En la frustración del fin la prestación puede cumplirse, pero es inútil; en la imprevisión la excesiva onerosidad sobreviniente es útil pero su cumplimiento es muy gravoso."
+            },
+            {
+                pregunta: "Caso Juan Carlos y Ramiro (Carnaval Corrientes): La entrega de señal o arras se interpreta como:",
+                opciones: [
+                    "Confirmatoria del acto.",
+                    "Arrepentimiento. Si Juan Carlos se arrepiente, la pierde en beneficio de Ramiro. Si Ramiro se arrepiente, debe restituirla doblada.",
+                    "Un pacto comisorio. Permite a una de las partes resolver el contrato, si la otra no cumple con sus obligaciones."
+                ],
+                correcta: "Confirmatoria del acto."
+            },
+            {
+                pregunta: "Obligación de saneamiento: La obligación de saneamiento pesa sobre:",
+                opciones: [
+                    "Quien no ha dividido bienes con otro.",
+                    "El transmitente de bienes a título oneroso y los antecesores en el dominio si la transferencia fue a título oneroso.",
+                    "Los obligados no concurrentes."
+                ],
+                correcta: "El transmitente de bienes a título oneroso y los antecesores en el dominio si la transferencia fue a título oneroso."
+            },
+            {
+                pregunta: "Contrato de adhesión – cláusula abusiva: “Cláusula por la cual se libera de la obligación de custodia al propietario del estacionamiento de automotores.”",
+                opciones: [
+                    "Amplían los derechos del predisponente.",
+                    "Desnaturalizan la obligación del predisponente.",
+                    "Estipulaciones sorpresivas en virtud de su contenido."
+                ],
+                correcta: "Desnaturalizan la obligación del predisponente."
+            },
+            {
+                pregunta: "Efectos del contrato con respecto a terceros (moto y fabricante):",
+                opciones: [
+                    "No es procedente, por los efectos objetivos del contrato.",
+                    "No es procedente porque el alcance subjetivo del contrato se agotó en las personas del actor y la concesionaria, siendo la compraventa res inter alios acta respecto al fabricante, ya que en ningún momento se referenció que la ejecución del contrato hubiese quedado sujeta a determinada conducta del fabricante.",
+                    "Sí es procedente, el fabricante es parte responsable en el contrato, porque debió entregar la documentación habilitante."
+                ],
+                correcta: "No es procedente porque el alcance subjetivo del contrato se agotó en las personas del actor y la concesionaria, siendo la compraventa res inter alios acta respecto al fabricante, ya que en ningún momento se referenció que la ejecución del contrato hubiese quedado sujeta a determinada conducta del fabricante."
+            },
+            {
+                pregunta: "Caso empresa de limpieza “Ser más brilloso”:",
+                opciones: [
+                    "En caso de silencio, el ordenamiento jurídico interpreta que Darío rechazó los productos.",
+                    "El silencio de Darío no es considerado manifestación de voluntad, excepto que hubiera un deber de expedirse."
+                ],
+                correcta: "El silencio de Darío no es considerado manifestación de voluntad, excepto que hubiera un deber de expedirse."
+            },
+            {
+                pregunta: "Vicios ocultos de la cosa: En caso de haberse manifestado, ¿en qué plazo se extingue la posibilidad de denuncia al garante?",
+                opciones: [
+                    "A los 10 días de haberse manifestado.",
+                    "A los 60 días de haberse manifestado.",
+                    "A los 30 días de haberse manifestado."
+                ],
+                correcta: "A los 60 días de haberse manifestado."
+            },
+            {
+                pregunta: "Caso Municipalidad de Corrientes – venta de plaza pública: “El Poder Ejecutivo Municipal de la Ciudad de Corrientes, a través de su Dirección de Bienes Patrimoniales y Escribanía Municipal, procedió a la venta de un inmueble de su propiedad ubicado dentro del exigido urbano, originariamente, destinado a plaza pública del Barrio Progreso de esta localidad, por la suma de $20.000.000 (veinte millones).” – Determine si el contrato de compraventa antes señalado es eficaz y en su caso por qué.",
+                opciones: [
+                    "El contrato trae aparejada una ineficacia estructural – nulidad absoluta – por cuanto se trata de un objeto prohibido.",
+                    "El contrato es inválido – nulidad relativa – por cuanto es inoponible a tercero adquirente de buena fe.",
+                    "El contrato de compraventa es perfectamente válido, solo que se debe materializar por escritura pública e inscribirse en el Registro de la Propiedad Inmueble Provincial."
+                ],
+                correcta: "El contrato trae aparejada una ineficacia estructural – nulidad absoluta – por cuanto se trata de un objeto prohibido."
+            },
+            {
+                pregunta: "Caso Esteban Pérez y artista estadounidense: “Esteban Pérez contrata a una artista estadounidense para realizar una extensa gira por Argentina, teniendo que contratar a la par los servicios pertinentes para la gira: movilidad, hospedaje y viáticos para ella y su banda. Uno de los requisitos por ella exigido, es que todos los choferes debían ser bilingües. Unos días antes de su arribo a la Argentina, tiene un accidente automovilístico, quedando con lesiones graves, que le impiden realizar la gira preestablecida en Argentina.” – Señale ante qué supuesto de ineficacia contractual estamos. – ¿Puede Juan solicitar la resolución del contrato y reclamar su resarcimiento?",
+                opciones: [
+                    "Estamos frente al supuesto de ineficacia contractual de frustración de la causa fin, que permite solicitar la resolución del contrato ante la imposibilidad física de cumplir el acuerdo – caso fortuito –, no da lugar al resarcimiento, quedando firme las prestaciones cumplidas, no así las pendientes; si se entregó algún adelanto en virtud de una prestación que no pueda ser cumplida, corresponde su restitución.",
+                    "Estamos frente a un supuesto en el que se puede solicitar la ineficacia del contrato por aplicación de la teoría de la imprevisión al producirse una alteración de las circunstancias, sobreviniente; da lugar a la resolución del acuerdo, quedando firme las prestaciones cumplidas, no da lugar al resarcimiento de daños y perjuicios.",
+                    "Estamos frente a ineficacia del contrato por aplicación del vicio de lesión que permite solicitar la rescisión ante la afectación de la imposibilidad física de cumplimiento por una de las partes, siendo posible solicitar el resarcimiento de daños y perjuicios por la parte perjudicada."
+                ],
+                correcta: "Estamos frente al supuesto de ineficacia contractual de frustración de la causa fin, que permite solicitar la resolución del contrato ante la imposibilidad física de cumplir el acuerdo – caso fortuito –, no da lugar al resarcimiento, quedando firme las prestaciones cumplidas, no así las pendientes; si se entregó algún adelanto en virtud de una prestación que no pueda ser cumplida, corresponde su restitución."
+            },
+            {
+                pregunta: "Promesa del hecho de un tercero: “Un instituto de inglés prometió a sus estudiantes graduados el otorgamiento de un título de grado de traductores públicos por parte de una Universidad, garantizándole el éxito de la propuesta. ¿El instituto educativo es responsable en caso de no cumplir dicha promesa?”",
+                opciones: [
+                    "La responsabilidad de ambos (Instituto y Universidad) es concurrente, ambos deben responder ante la alumna por el incumplimiento contractual.",
+                    "No es responsable el Instituto, la responsabilidad por daños y perjuicios recae exclusivamente en la Universidad.",
+                    "El Instituto resulta responsable por los daños y perjuicios sufridos por la alumna a quien se le negó la expedición del título, dado que éste garantizó el éxito de la propuesta."
+                ],
+                correcta: "El Instituto resulta responsable por los daños y perjuicios sufridos por la alumna a quien se le negó la expedición del título, dado que éste garantizó el éxito de la propuesta."
+            },
+            {
+                pregunta: "En un contrato las palabras dudosas deben ser interpretadas:",
+                opciones: [
+                    "A favor de quien las estableció.",
+                    "En contra de quien las formuló.",
+                    "A favor de ambos contratantes."
+                ],
+                correcta: "En contra de quien las formuló."
+            },
+            {
+                pregunta: "¿La autonomía de la voluntad qué libertades comprende?",
+                opciones: [
+                    "De rescisión del contrato perfeccionado.",
+                    "De modificación del contrato perfeccionado y extinción del contrato concluido.",
+                    "De modificación del contrato."
+                ],
+                correcta: "De modificación del contrato perfeccionado y extinción del contrato concluido."
+            },
+            {
+                pregunta: "Contrato de adhesión – caso Esteban y Argentina Seguros S.A.: “Esteban celebró con Argentina Seguros S.A. un contrato de adhesión en el que algunas cláusulas predispuestas sobre la cobertura a brindar por la aseguradora, eran equívocas y ofrecían dificultad para precisar el alcance de las obligaciones asumidas por el predisponente.” – Determine en la presente situación problemática qué debe prevalecer:",
+                opciones: [
+                    "La interpretación que pretendieron darle las partes.",
+                    "La interpretación que favorezca a quien contrató con el predisponente, autor de las cláusulas uniformes.",
+                    "La interpretación que favorezca a quien redactó las cláusulas uniformes."
+                ],
+                correcta: "La interpretación que favorezca a quien contrató con el predisponente, autor de las cláusulas uniformes."
+            },
+            {
+                pregunta: "Compraventa de cosas muebles sin precio señalado: “En una compraventa de cosas muebles no se ha señalado el precio ni expresa ni tácitamente, ni se ha estipulado un medio para determinarlo.”",
+                opciones: [
+                    "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio generalmente cobrado en el momento de la celebración del contrato para tales mercaderías.",
+                    "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio que generalmente se cobra, por tales mercaderías, en el momento de cumplimiento del contrato.",
+                    "Determina el valor de la mercadería la parte vendedora."
+                ],
+                correcta: "La integración puede provenir de la ley, considerando que las partes han hecho referencia al precio que generalmente se cobra, por tales mercaderías, en el momento de cumplimiento del contrato."
+            },
+            {
+                pregunta: "Caso Lucas y Valentín – donación de inmueble por instrumento privado: “Lucas le dona a Valentín un inmueble de su propiedad, ubicado en las afueras de la ciudad de Santa Fe, el que lo celebran por instrumento privado con firmas certificadas por Escribano Público.” – ¿Las partes pueden requerir se satisfaga la forma exigida por la ley, esto es la Escritura Pública, exigida por el C.C. y C.?",
+                opciones: [
+                    "Ninguna de las partes puede exigir se satisfaga la forma exigida por la ley, porque la misma es exigida como requisito de validez del negocio.",
+                    "El contrato vale como en el cual las partes se obligan a cumplir con la formalidad exigida por la ley.",
+                    "Las partes están facultadas a escoger libremente la formalidad que crean conveniente – libertad de formas."
+                ],
+                correcta: "Ninguna de las partes puede exigir se satisfaga la forma exigida por la ley, porque la misma es exigida como requisito de validez del negocio."
+            },
+            {
+                pregunta: "La responsabilidad por vicios redhibitorios constituye:",
+                opciones: [
+                    "Responsabilidad concurrente toda vez que el adquirente no puede alegar su propia torpeza y el vendedor eximirse por no haber puesto de manifiesto los defectos de la cosa en el momento del acuerdo.",
+                    "Responsabilidad subjetiva en la que el adquirente debe probar la culpa del vendedor.",
+                    "Responsabilidad objetiva, que obliga al enajenante a restituir la cosa a su estado primitivo, sea o no de buena fe."
+                ],
+                correcta: "Responsabilidad objetiva, que obliga al enajenante a restituir la cosa a su estado primitivo, sea o no de buena fe."
+            },
+            {
+                pregunta: "Contrato de adhesión – Plan de ahorro para automotor: “Plan de Ahorro para fines determinados, contrato de ahorro previo para la adquisición de un automotor Marca XX, Modelo SSS, de Luxe …” – Indique cuál sería un elemento esencial del contrato:",
+                opciones: [
+                    "Hacer posible la adjudicación en propiedad al Suscriptor Ahorrista del Bien Tipo indicado en la Solicitud de Adhesión utilizando los fondos aportados por el conjunto de suscriptores del respectivo Grupo.",
+                    "Las cuotas establecidas y los intereses punitorios.",
+                    "Prenda, gastos de entrega."
+                ],
+                correcta: "Hacer posible la adjudicación en propiedad al Suscriptor Ahorrista del Bien Tipo indicado en la Solicitud de Adhesión utilizando los fondos aportados por el conjunto de suscriptores del respectivo Grupo."
+            },
+            {
+                pregunta: "Caso Matías y Rubén – donación de inmueble por instrumento privado: “Matías dona a Rubén un inmueble de su propiedad, ubicado en las afueras de la ciudad de Santa Fe, el que lo celebran por instrumento privado con firmas certificadas por Escribano Público.” – ¿Las partes pueden requerir se satisfaga la forma exigida por la ley, esto es la Escritura Pública, exigida por el C.C. y C.?",
+                opciones: [
+                    "El contrato vale como en el cual las partes se obligan a cumplir con la formalidad exigida por la ley.",
+                    "Las partes están facultadas a escoger libremente la formalidad que crean conveniente – libertad de formas.",
+                    "Ninguna de las partes puede exigir se satisfaga la forma exigida por la ley, porque la misma es exigida como requisito de validez del negocio."
+                ],
+                correcta: "Ninguna de las partes puede exigir se satisfaga la forma exigida por la ley, porque la misma es exigida como requisito de validez del negocio."
+            },
+            {
+                pregunta: "Efectos del contrato con respecto a terceros – compraventa de moto: “¿Es procedente extender la condena por incumplimiento del contrato de compraventa de una moto, en el caso de que no haya entregado la documentación habilitante el fabricante, ya que el negocio fue concluido por el comprador y la concesionaria como vendedora, sin que conste en los recibos de pagos la intervención de aquél?”",
+                opciones: [
+                    "No es procedente, por los efectos objetivos del contrato.",
+                    "No es procedente porque el alcance subjetivo del contrato se agotó en las personas del actor y la concesionaria, siendo la compraventa res inter alios acta respecto al fabricante, ya que en ningún momento se referenció que la ejecución del contrato hubiese quedado sujeta a determinada conducta del fabricante.",
+                    "Sí es procedente, el fabricante es parte responsable en el contrato, porque debió entregar la documentación habilitante."
+                ],
+                correcta: "No es procedente porque el alcance subjetivo del contrato se agotó en las personas del actor y la concesionaria, siendo la compraventa res inter alios acta respecto al fabricante, ya que en ningún momento se referenció que la ejecución del contrato hubiese quedado sujeta a determinada conducta del fabricante."
+            },
+            {
+                pregunta: "Capacidad – caso madre y abogado en juicio de desalojo: “Su madre se encuentra en un juicio por desalojo ya que su ex locatario no le abona el canon locativo hace más de 15 meses. El abogado le ofrece a su madre que le entregue una parte de ese inmueble como pago por sus honorarios, porque su madre es jubilada y no cuenta con fondos suficientes para afrontar los costos del proceso judicial. Ud. es estudiante de derecho de la Universidad Católica de Salta y asesora a su madre.”",
+                opciones: [
+                    "El abogado y su madre pueden contratar porque son dos personas mayores de edad y capaces y sobre el inmueble no existe ningún gravamen.",
+                    "El abogado no puede contratar sobre este bien porque se encuentra en un proceso litigioso en el cual él está interviniendo y esa nulidad es absoluta y no puede sanearse.",
+                    "El abogado no puede contratar sobre este bien, pero si su madre expresamente confirma la operación, la nulidad puede sanearse porque es en protección del interés particular de la representada para evitar abusos por parte del abogado."
+                ],
+                correcta: "El abogado no puede contratar sobre este bien porque se encuentra en un proceso litigioso en el cual él está interviniendo y esa nulidad es absoluta y no puede sanearse."
+            },
+            {
+                pregunta: "Nulidad de contrato celebrado por persona con capacidad restringida: – ¿La parte capaz qué puede exigir?",
+                opciones: [
+                    "La medida del enriquecimiento del incapaz.",
+                    "El reintegro de los gastos.",
+                    "Una reparación integral."
+                ],
+                correcta: "La medida del enriquecimiento del incapaz."
+            },
+            {
+                pregunta: "Contratos de adhesión a cláusulas generales predispuestas – prevalencia:",
+                opciones: [
+                    "Las cláusulas generales sobre las particulares.",
+                    "Las que acuerden las partes.",
+                    "Las clausulas particulares sobre las generales"
+                ],
+                correcta: "Las clausulas particulares sobre las generales"
+            },
+            {
+                pregunta: "¿En qué consiste la excepción de incumplimiento?",
+                opciones: [
+                    "En los contratos bilaterales cuando las partes deben cumplir simultáneamente, una de ellas no puede suspender el cumplimiento de la prestación, aunque la otra ofrezca cumplir en el futuro.",
+                    "En los contratos bilaterales si la prestación es a favor de varios interesados la falta de cumplimiento de todas las partes puede suspender la parte debida a cada uno.",
+                    "En los contratos bilaterales cuando las partes deben cumplir simultáneamente, una de ellas puede suspender el cumplimiento de la prestación, hasta que la otra cumpla u ofrezca cumplir"
+                ],
+                correcta: "En los contratos bilaterales cuando las partes deben cumplir simultáneamente, una de ellas puede suspender el cumplimiento de la prestación, hasta que la otra cumpla u ofrezca cumplir"
+            },
+            {
+                pregunta: "La forma como modo específico es:",
+                opciones: [
+                    "Es el elemento aglutinante del acto jurídico",
+                    "La exteriorización de la voluntad de los sujetos",
+                    "La formalidad en la que debe otorgarse el acto jurídico"
+                ],
+                correcta: "La formalidad en la que debe otorgarse el acto jurídico"
+            },
+            {
+                pregunta: "La lesión produce como consecuencia:",
+                opciones: [
+                    "La Rescisión del contrato",
+                    "La Resolución del contrato",
+                    "La nulidad del contrato"
+                ],
+                correcta: "La nulidad del contrato"
+            },
+            {
+                pregunta: "Que efectos produce la supresión de cláusulas abusivas en un contrato de adhesión?",
+                opciones: [
+                    "Su nulidad total del contrato",
+                    "La nulidad parcial del contrato",
+                    "Su Resolución"
+                ],
+                correcta: "La nulidad parcial del contrato"
+            },
+            {
+                pregunta: "Pacto de Preferencia",
+                opciones: [
+                    "Genera una obligación de hacer a cargo de una de las partes, quien, si decide celebrar un futuro contrato, debe hacerlo con la otra, o con las otras partes",
+                    "Su perfeccionamiento depende de una conformidad o de una autorización- negocio ad referéndum",
+                    "Obliga a las partes a celebrar un futuro contrato a cuyo fin una o varias de ellas otorgan irrevocablemente a la otra, la facultad de requerir, a su arbitrio, que el contrato definitivo sea concluido"
+                ],
+                correcta: "Genera una obligación de hacer a cargo de una de las partes, quien, si decide celebrar un futuro contrato, debe hacerlo con la otra, o con las otras partes"
+            },
+            {
+                pregunta: "Determine en el siguiente caso frente a qué clase de contrato estamos: “Las partes de un contrato de compraventa de acciones pactan que una tiene el derecho de comprarle a la otra sus acciones dentro de cierto tiempo por el precio que tales acciones coticen en bolsa, y recíprocamente, la segunda tiene derecho a que la primera le compre las acciones dentro de cierto tiempo al precio que coticen”",
+                opciones: [
+                    "Contrato con pacto de preferencia",
+                    "Contrato de opción recíproco",
+                    "Contrato sujeto a conformidad"
+                ],
+                correcta: "Contrato de opción recíproco"
+            },
+            {
+                pregunta: "Determine en los siguientes ejemplos cuál de ellos es un contrato preparatorio normativo:",
+                opciones: [
+                    "Los contratos establecidos por las convenciones colectivas de trabajo",
+                    "Contratos tipos",
+                    "Venta mediante cupo, arrendamiento forzoso"
+                ],
+                correcta: "Contratos tipos"
+            }
+        ];
+        // ============================================
+        // FIN DEL BANCO DE PREGUNTAS
+        // ============================================
+
+        // División del banco en dos bloques
+        const mitad = Math.ceil(bancoPreguntas.length / 2); // 48
+        const bloque1Preguntas = bancoPreguntas.slice(0, mitad);
+        const bloque2Preguntas = bancoPreguntas.slice(mitad);
+
+        // Estado global
+        let bloqueActual = null; // 1 o 2
+        let examenActual = [];
+        let respuestasUsuario = {};
+        let examenCorregido = false;
+        let temporizadorActivo = false;
+        let tiempoRestante = 60 * 60; // 60 minutos por bloque
+        let timerInterval = null;
+        let preguntaActualIndex = 0;
+
+        // Resultados acumulados
+        let resultadoBloque1 = null;
+        let resultadoBloque2 = null;
+
+        function inicializar() {
+            cargarTema();
+            mostrarSeleccionBloque();
+        }
+
+        function mostrarSeleccionBloque() {
+            bloqueActual = null;
+            resultadoBloque1 = null;
+            resultadoBloque2 = null;
+            detenerTemporizador();
+            document.getElementById('timerDisplay').style.display = 'none';
+            document.getElementById('btnToggleTimer').textContent = '⏱ Timer';
+
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = `
+            <div class="bloque-container">
+              <h2 style="color: var(--primary);">📚 Seleccioná con qué bloque comenzar</h2>
+              <p style="color: var(--text-secondary);">Cada bloque se corrige por separado. Al finalizar ambos, verás el resultado total.</p>
+              <div class="bloque-botones">
+                <button class="btn-bloque" onclick="seleccionarBloque(1)">
+                  <span class="emoji">📖</span> Bloque 1
+                  <div class="bloque-info">${bloque1Preguntas.length} preguntas</div>
+                </button>
+                <button class="btn-bloque" onclick="seleccionarBloque(2)">
+                  <span class="emoji">📘</span> Bloque 2
+                  <div class="bloque-info">${bloque2Preguntas.length} preguntas</div>
+                </button>
+              </div>
+            </div>`;
+        }
+
+        function seleccionarBloque(numero) {
+            bloqueActual = numero;
+            resultadoBloque1 = (numero === 1 && resultadoBloque1) ? resultadoBloque1 : null;
+            resultadoBloque2 = (numero === 2 && resultadoBloque2) ? resultadoBloque2 : null;
+            generarNuevoExamen();
+        }
+
+        function fisherYatesShuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function generarNuevoExamen() {
+            if (!bloqueActual) {
+                mostrarSeleccionBloque();
+                return;
+            }
+            detenerTemporizador();
+            temporizadorActivo = false;
+            document.getElementById('btnToggleTimer').textContent = '⏱ Timer';
+            document.getElementById('timerDisplay').style.display = 'none';
+            tiempoRestante = 60 * 60;
+            actualizarTimerDisplay();
+
+            examenCorregido = false;
+            respuestasUsuario = {};
+            preguntaActualIndex = 0;
+
+            const preguntasFuente = bloqueActual === 1 ? bloque1Preguntas : bloque2Preguntas;
+            examenActual = fisherYatesShuffle(preguntasFuente);
+            examenActual = examenActual.map(p => {
+                const opcionesOriginales = [...p.opciones];
+                const correctaOriginal = p.correcta;
+                const indices = opcionesOriginales.map((_, i) => i);
+                const indicesMezclados = fisherYatesShuffle(indices);
+                const nuevasOpciones = indicesMezclados.map(i => opcionesOriginales[i]);
+                return { ...p, opciones: nuevasOpciones, correcta: correctaOriginal };
+            });
+
+            renderizarExamen();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function nuevoExamen() {
+            if (!bloqueActual) return;
+            if (temporizadorActivo || Object.keys(respuestasUsuario).length > 0) {
+                if (confirm('¿Generar un nuevo examen para este bloque? Perderás las respuestas actuales.')) generarNuevoExamen();
+            } else generarNuevoExamen();
+        }
+
+        function reiniciarRespuestas() {
+            if (!bloqueActual) return;
+            if (examenCorregido) return alert('Este bloque ya fue corregido. Generá uno nuevo o pasá al siguiente bloque.');
+            if (confirm('¿Borrar todas tus respuestas de este bloque?')) {
+                respuestasUsuario = {};
+                preguntaActualIndex = 0;
+                renderizarExamen();
+            }
+        }
+
+        function confirmarCorreccion() {
+            if (!bloqueActual || examenCorregido) return;
+            const respondidas = Object.keys(respuestasUsuario).length;
+            const total = examenActual.length;
+            if (respondidas < total && !confirm(`Solo has respondido ${respondidas} de ${total} preguntas. Las no respondidas se considerarán incorrectas. ¿Continuar?`)) return;
+            document.getElementById('modalConfirm').style.display = 'flex';
+        }
+
+        function cerrarModal() { document.getElementById('modalConfirm').style.display = 'none'; }
+        function cerrarModalResultados() {
+            document.getElementById('modalResultados').style.display = 'none';
+            // Si ya completó ambos bloques, volver a selección
+            if (resultadoBloque1 && resultadoBloque2) {
+                mostrarSeleccionBloque();
+            }
+        }
+
+        function corregirExamen() {
+            cerrarModal();
+            detenerTemporizador();
+            temporizadorActivo = false;
+            document.getElementById('btnToggleTimer').textContent = '⏱ Timer';
+            document.getElementById('timerDisplay').style.display = 'none';
+            examenCorregido = true;
+            renderizarExamen();
+            mostrarResultados();
+        }
+
+        function siguienteBloque() {
+            document.getElementById('modalResultados').style.display = 'none';
+            if (bloqueActual === 1) {
+                seleccionarBloque(2);
+            } else {
+                seleccionarBloque(1);
+            }
+        }
+
+        function toggleSeleccionMultiple(indice, opcion) {
+            if (examenCorregido) return;
+            let seleccionadas = respuestasUsuario[indice] || [];
+            if (!Array.isArray(seleccionadas)) seleccionadas = [];
+            const index = seleccionadas.indexOf(opcion);
+            if (index > -1) {
+                seleccionadas.splice(index, 1);
+            } else {
+                seleccionadas.push(opcion);
+            }
+            respuestasUsuario[indice] = seleccionadas.length > 0 ? seleccionadas : undefined;
+            renderizarExamen();
+        }
+
+        function seleccionarRespuestaUnica(indice, respuesta) {
+            if (examenCorregido) return;
+            respuestasUsuario[indice] = respuesta;
+            renderizarExamen();
+        }
+
+        function verificarRespuesta(indice) {
+            const p = examenActual[indice];
+            const resp = respuestasUsuario[indice];
+            if (resp === undefined) return false;
+            if (Array.isArray(p.correcta)) {
+                if (!Array.isArray(resp)) return false;
+                const correctaSorted = [...p.correcta].sort();
+                const respSorted = [...resp].sort();
+                return correctaSorted.length === respSorted.length && correctaSorted.every((val, idx) => val === respSorted[idx]);
+            } else {
+                return resp === p.correcta;
+            }
+        }
+
+        function renderizarExamen() {
+            if (!bloqueActual) {
+                mostrarSeleccionBloque();
+                return;
+            }
+            const container = document.getElementById('mainContainer');
+            const total = examenActual.length;
+            const respondidas = Object.keys(respuestasUsuario).length;
+            const porcentaje = Math.round((respondidas / total) * 100);
+
+            let dotsHTML = '';
+            for (let i = 0; i < total; i++) {
+                let dotClass = 'nav-dot';
+                if (i === preguntaActualIndex) dotClass += ' active';
+                if (respuestasUsuario[i] !== undefined) {
+                    if (examenCorregido) {
+                        dotClass += verificarRespuesta(i) ? ' answered' : ' answered-incorrect';
+                    } else dotClass += ' answered';
+                }
+                dotsHTML += `<span class="${dotClass}" onclick="irAPregunta(${i})" title="Pregunta ${i+1}"></span>`;
+            }
+
+            const pActual = examenActual[preguntaActualIndex];
+            const multiple = Array.isArray(pActual.correcta);
+            const respuestaSel = respuestasUsuario[preguntaActualIndex];
+
+            let opcionesHTML = '';
+            pActual.opciones.forEach((opcion, idx) => {
+                let clase = 'option-item';
+                const letra = 'ABCD'[idx] || '•';
+                
+                if (multiple) {
+                    const seleccionadas = Array.isArray(respuestaSel) ? respuestaSel : [];
+                    if (seleccionadas.includes(opcion)) clase += ' selected';
+                    if (examenCorregido) {
+                        const correctasArray = pActual.correcta;
+                        if (correctasArray.includes(opcion) && seleccionadas.includes(opcion)) clase += ' correct';
+                        else if (!correctasArray.includes(opcion) && seleccionadas.includes(opcion)) clase += ' incorrect';
+                        else if (correctasArray.includes(opcion) && !seleccionadas.includes(opcion)) clase += ' correct';
+                    }
+                    opcionesHTML += `
+                    <label class="${clase}">
+                        <input type="checkbox" class="option-checkbox" ${examenCorregido ? 'disabled' : ''}
+                            ${Array.isArray(respuestaSel) && respuestaSel.includes(opcion) ? 'checked' : ''}
+                            onchange="toggleSeleccionMultiple(${preguntaActualIndex}, '${opcion.replace(/'/g, "\\'")}')" />
+                        <span class="option-letter">${letra}</span>
+                        <span>${opcion}</span>
+                        ${examenCorregido && pActual.correcta.includes(opcion) ? ' ✅' : ''}
+                    </label>`;
+                } else {
+                    if (respuestaSel === opcion) clase += ' selected';
+                    if (examenCorregido) {
+                        if (opcion === pActual.correcta) clase += ' correct';
+                        else if (respuestaSel === opcion && opcion !== pActual.correcta) clase += ' incorrect';
+                    }
+                    const onclickAttr = examenCorregido ? '' : `onclick="seleccionarRespuestaUnica(${preguntaActualIndex}, '${opcion.replace(/'/g, "\\'")}')"`;
+                    opcionesHTML += `
+                    <li class="${clase}" ${onclickAttr} style="display:flex;align-items:center;">
+                        <span class="option-letter">${letra}</span>
+                        <span>${opcion}</span>
+                        ${examenCorregido && opcion === pActual.correcta ? ' ✅' : ''}
+                        ${examenCorregido && respuestaSel === opcion && opcion !== pActual.correcta ? ' ❌' : ''}
+                    </li>`;
+                }
+            });
+
+            let explicacionHTML = '';
+            if (examenCorregido && pActual.explicacion) {
+                explicacionHTML = `<div class="explanation-box"><strong>💡 Explicación:</strong> ${pActual.explicacion}</div>`;
+            }
+
+            container.innerHTML = `
+            <div class="progress-container">
+              <div class="progress-bar-outer"><div class="progress-bar-inner" style="width:${porcentaje}%;"></div></div>
+              <div class="progress-label"><span>Progreso Bloque ${bloqueActual}: ${respondidas}/${total}</span><span>${porcentaje}%</span></div>
+            </div>
+            <div class="nav-dots">${dotsHTML}</div>
+            <div class="card">
+              <div class="card-header">
+                <span class="question-badge">Pregunta ${preguntaActualIndex + 1} de ${total}</span>
+                <span class="question-type">${multiple ? 'Selección múltiple' : 'Opción única'}</span>
+                <span>${respuestaSel !== undefined ? '✅ Respondida' : '❓ Sin responder'}</span>
+              </div>
+              <p class="question-text">${pActual.pregunta}</p>
+              <div class="options-list">${opcionesHTML}</div>
+              ${explicacionHTML}
+              <div class="nav-buttons">
+                <button class="btn btn-outline btn-sm" onclick="irAPregunta(${preguntaActualIndex - 1})" ${preguntaActualIndex === 0 ? 'disabled' : ''}>⬅ Anterior</button>
+                <span>Usa los puntos para navegar</span>
+                <button class="btn btn-outline btn-sm" onclick="irAPregunta(${preguntaActualIndex + 1})" ${preguntaActualIndex === total - 1 ? 'disabled' : ''}>Siguiente ➡</button>
+              </div>
+              <div style="text-align:center;margin-top:1rem;">
+                <button class="btn btn-outline btn-sm" onclick="irAPregunta(0)">🏠 Ir al inicio</button>
+              </div>
+            </div>`;
+        }
+
+        function irAPregunta(index) {
+            if (index < 0 || index >= examenActual.length) return;
+            preguntaActualIndex = index;
+            renderizarExamen();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function mostrarResultados() {
+            let correctas = 0;
+            for (let i = 0; i < examenActual.length; i++) {
+                if (verificarRespuesta(i)) correctas++;
+            }
+            const total = examenActual.length;
+            const incorrectas = total - correctas;
+            const porcentaje = Math.round((correctas / total) * 100);
+            const nota = (correctas / total) * 10;
+
+            // Guardar resultado del bloque actual
+            const resultado = { correctas, total, incorrectas, porcentaje, nota };
+            if (bloqueActual === 1) resultadoBloque1 = resultado;
+            else resultadoBloque2 = resultado;
+
+            const titulo = document.getElementById('resultadosTitulo');
+            titulo.textContent = `📊 Resultados Bloque ${bloqueActual}`;
+
+            let resumenHTML = `
+            <div class="results-grid">
+              <div class="result-card"><div class="result-value">${total}</div><div class="result-label">Total preguntas</div></div>
+              <div class="result-card"><div class="result-value" style="color:var(--success);">${correctas}</div><div class="result-label">Correctas</div></div>
+              <div class="result-card"><div class="result-value" style="color:var(--danger);">${incorrectas}</div><div class="result-label">Incorrectas</div></div>
+              <div class="result-card"><div class="result-value">${porcentaje}%</div><div class="result-label">Aciertos</div></div>
+            </div>
+            <div class="grade-circle">${nota.toFixed(1)}</div>
+            <p style="margin-top:0.5rem;font-weight:600;">Nota sobre 10</p>`;
+
+            // Si ambos bloques completos, agregar resumen total
+            if (resultadoBloque1 && resultadoBloque2) {
+                const totalGlobal = resultadoBloque1.total + resultadoBloque2.total;
+                const correctasGlobal = resultadoBloque1.correctas + resultadoBloque2.correctas;
+                const notaGlobal = (correctasGlobal / totalGlobal) * 10;
+                resumenHTML += `
+                <hr style="margin:1.5rem 0; border-color: var(--border);">
+                <h4 style="color:var(--primary);">🏆 Resultado Final (ambos bloques)</h4>
+                <div class="results-grid">
+                  <div class="result-card"><div class="result-value">${totalGlobal}</div><div class="result-label">Total</div></div>
+                  <div class="result-card"><div class="result-value" style="color:var(--success);">${correctasGlobal}</div><div class="result-label">Correctas</div></div>
+                  <div class="result-card"><div class="result-value">${Math.round((correctasGlobal / totalGlobal) * 100)}%</div><div class="result-label">Aciertos</div></div>
+                </div>
+                <div class="grade-circle">${notaGlobal.toFixed(1)}</div>
+                <p style="margin-top:0.5rem;font-weight:600;">Nota final sobre 10</p>`;
+                // Ocultar botón de siguiente
+                document.getElementById('btnSiguienteBloque').style.display = 'none';
+            } else {
+                // Mostrar botón para ir al otro bloque
+                document.getElementById('btnSiguienteBloque').style.display = 'inline-flex';
+                document.getElementById('btnSiguienteBloque').textContent = bloqueActual === 1 ? '▶ Ir al Bloque 2' : '▶ Ir al Bloque 1';
+            }
+
+            document.getElementById('resultadosContenido').innerHTML = resumenHTML;
+            document.getElementById('modalResultados').style.display = 'flex';
+        }
+
+        // --- Temporizador ---
+        function toggleTimer() {
+            if (!bloqueActual || examenCorregido) return;
+            if (temporizadorActivo) {
+                detenerTemporizador();
+                temporizadorActivo = false;
+                document.getElementById('btnToggleTimer').textContent = '⏱ Timer';
+                document.getElementById('timerDisplay').style.display = 'none';
+            } else {
+                if (tiempoRestante <= 0) tiempoRestante = 60 * 60;
+                temporizadorActivo = true;
+                document.getElementById('btnToggleTimer').textContent = '⏱ Detener';
+                document.getElementById('timerDisplay').style.display = 'inline-flex';
+                iniciarTemporizador();
+            }
+        }
+
+        function iniciarTemporizador() {
+            actualizarTimerDisplay();
+            timerInterval = setInterval(() => {
+                tiempoRestante--;
+                actualizarTimerDisplay();
+                if (tiempoRestante <= 0) {
+                    detenerTemporizador();
+                    alert('⏰ ¡Tiempo agotado para este bloque! Se corregirá automáticamente.');
+                    corregirExamen();
+                }
+            }, 1000);
+        }
+
+        function detenerTemporizador() {
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        }
+
+        function actualizarTimerDisplay() {
+            const min = Math.floor(tiempoRestante / 60);
+            const seg = tiempoRestante % 60;
+            document.getElementById('timerValue').textContent = `${min.toString().padStart(2,'0')}:${seg.toString().padStart(2,'0')}`;
+            const timerDisp = document.getElementById('timerDisplay');
+            timerDisp.classList.toggle('warning', tiempoRestante <= 300 && temporizadorActivo);
+        }
+
+        // --- Tema ---
+        function toggleTheme() {
+            const nuevo = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', nuevo);
+            localStorage.setItem('theme', nuevo);
+        }
+
+        function cargarTema() {
+            const saved = localStorage.getItem('theme');
+            if (saved) document.body.setAttribute('data-theme', saved);
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); cerrarModalResultados(); } });
+        document.getElementById('modalConfirm').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModal(); });
+        document.getElementById('modalResultados').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModalResultados(); });
+
+        inicializar();
+    </script>
+</body>
+</html>
