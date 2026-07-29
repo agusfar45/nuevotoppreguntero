@@ -237,12 +237,13 @@
                 ⏱ <span id="timerValue">60:00</span>
             </span>
         </div>
-        <div class="header-actions">
+        <div class="header-actions" id="headerActions">
             <button class="btn btn-outline btn-sm" onclick="toggleTimer()" id="btnToggleTimer">⏱ Timer</button>
             <button class="btn-icon" onclick="toggleTheme()" title="Modo claro/oscuro">🌓</button>
-            <button class="btn btn-outline btn-sm" onclick="nuevoExamen()">🔄 Nuevo examen</button>
-            <button class="btn btn-outline btn-sm" onclick="reiniciarRespuestas()">🗑 Reiniciar</button>
-            <button class="btn btn-success btn-sm" onclick="confirmarCorreccion()">✅ Corregir</button>
+            <button class="btn btn-outline btn-sm" onclick="nuevoExamen()" id="btnNuevoExamen">🔄 Nuevo examen</button>
+            <button class="btn btn-outline btn-sm" onclick="reiniciarRespuestas()" id="btnReiniciar">🗑 Reiniciar</button>
+            <button class="btn btn-success btn-sm" onclick="confirmarCorreccion()" id="btnCorregir">✅ Corregir</button>
+            <button class="btn btn-outline btn-sm" onclick="volverASeleccion()" id="btnVolverSeleccion" style="display:none;">📋 Volver a bloques</button>
         </div>
     </header>
 
@@ -263,8 +264,9 @@
         <div class="modal" style="max-width:550px;">
             <h3 id="resultadosTitulo">📊 Resultados del Bloque</h3>
             <div id="resultadosContenido"></div>
+            <p style="color: var(--text-secondary); margin-top: 0.8rem;">👀 Podés revisar tus respuestas después de cerrar esta ventana.</p>
             <div class="modal-buttons" id="resultadosBotones">
-                <button class="btn btn-primary" onclick="cerrarModalResultados()">Revisar respuestas</button>
+                <button class="btn btn-primary" onclick="revisarRespuestas()">Revisar mis respuestas 👀</button>
                 <button class="btn btn-outline" onclick="volverASeleccion()">📋 Volver a selección</button>
             </div>
         </div>
@@ -1131,7 +1133,6 @@
                 correcta: "Contratos tipos"
             }
         ];
-
         // ============================================
         // FIN DEL BANCO DE PREGUNTAS
         // ============================================
@@ -1142,19 +1143,16 @@
         for (let i = 0; i < bancoPreguntas.length; i += BLOQUE_SIZE) {
             bloques.push(bancoPreguntas.slice(i, i + BLOQUE_SIZE));
         }
-        // bloques ahora es un array de arrays: [bloque1 (10 preg), bloque2 (10 preg), ..., bloque9 (10 preg), bloque10 (5 preg)]
 
         // Estado global
-        let bloqueActualIndex = -1; // índice del bloque seleccionado (-1 = ninguno)
+        let bloqueActualIndex = -1;
         let examenActual = [];
         let respuestasUsuario = {};
         let examenCorregido = false;
         let temporizadorActivo = false;
-        let tiempoRestante = 60 * 60; // 60 minutos por bloque
+        let tiempoRestante = 60 * 60;
         let timerInterval = null;
         let preguntaActualIndex = 0;
-
-        // Resultados acumulados por bloque (cada elemento: { correctas, total, ... } o null si no hecho)
         let resultadosBloques = new Array(bloques.length).fill(null);
 
         function inicializar() {
@@ -1162,12 +1160,45 @@
             mostrarSeleccionBloques();
         }
 
+        function actualizarBotonesHeader() {
+            const enExamen = bloqueActualIndex !== -1;
+            const btnTimer = document.getElementById('btnToggleTimer');
+            const btnNuevo = document.getElementById('btnNuevoExamen');
+            const btnReiniciar = document.getElementById('btnReiniciar');
+            const btnCorregir = document.getElementById('btnCorregir');
+            const btnVolver = document.getElementById('btnVolverSeleccion');
+
+            if (enExamen && examenCorregido) {
+                // Modo revisión
+                btnTimer.style.display = 'none';
+                btnNuevo.style.display = 'none';
+                btnReiniciar.style.display = 'none';
+                btnCorregir.style.display = 'none';
+                btnVolver.style.display = 'inline-flex';
+            } else if (enExamen && !examenCorregido) {
+                // Modo examen activo
+                btnTimer.style.display = 'inline-flex';
+                btnNuevo.style.display = 'inline-flex';
+                btnReiniciar.style.display = 'inline-flex';
+                btnCorregir.style.display = 'inline-flex';
+                btnVolver.style.display = 'none';
+            } else {
+                // Sin examen (selección)
+                btnTimer.style.display = 'none';
+                btnNuevo.style.display = 'none';
+                btnReiniciar.style.display = 'none';
+                btnCorregir.style.display = 'none';
+                btnVolver.style.display = 'none';
+                document.getElementById('timerDisplay').style.display = 'none';
+            }
+        }
+
         function mostrarSeleccionBloques() {
-            // Limpiar estado del examen
             bloqueActualIndex = -1;
             detenerTemporizador();
             document.getElementById('timerDisplay').style.display = 'none';
             document.getElementById('btnToggleTimer').textContent = '⏱ Timer';
+            actualizarBotonesHeader();
 
             let htmlBloques = '';
             for (let i = 0; i < bloques.length; i++) {
@@ -1184,13 +1215,14 @@
                 htmlBloques += `<button class="${clase}" ${!completado ? `onclick="seleccionarBloque(${i})"` : 'disabled'} title="${completado ? 'Ya realizado' : 'Comenzar bloque'}">${contenido}</button>`;
             }
 
+            const todosCompletos = resultadosBloques.every(r => r !== null);
             const container = document.getElementById('mainContainer');
             container.innerHTML = `
             <div class="bloque-container">
               <h2 style="color: var(--primary);">📚 Seleccioná un bloque para comenzar</h2>
               <p style="color: var(--text-secondary);">Completá todos los bloques para obtener tu nota final. Podés hacerlos en cualquier orden.</p>
               <div class="bloque-grid">${htmlBloques}</div>
-              ${resultadosBloques.every(r => r !== null) ? `
+              ${todosCompletos ? `
                 <div style="margin-top:1rem;">
                   <button class="btn btn-primary" onclick="mostrarResumenFinal()">🏆 Ver resumen final</button>
                 </div>` : ''}
@@ -1226,6 +1258,7 @@
             examenCorregido = false;
             respuestasUsuario = {};
             preguntaActualIndex = 0;
+            actualizarBotonesHeader();
 
             const preguntasFuente = bloques[bloqueActualIndex];
             examenActual = fisherYatesShuffle(preguntasFuente);
@@ -1243,15 +1276,14 @@
         }
 
         function nuevoExamen() {
-            if (bloqueActualIndex === -1) return;
+            if (bloqueActualIndex === -1 || examenCorregido) return;
             if (temporizadorActivo || Object.keys(respuestasUsuario).length > 0) {
                 if (confirm('¿Generar un nuevo examen para este bloque? Perderás las respuestas actuales.')) generarNuevoExamen();
             } else generarNuevoExamen();
         }
 
         function reiniciarRespuestas() {
-            if (bloqueActualIndex === -1) return;
-            if (examenCorregido) return alert('Este bloque ya fue corregido. Volvé a la selección para hacer otro.');
+            if (bloqueActualIndex === -1 || examenCorregido) return;
             if (confirm('¿Borrar todas tus respuestas de este bloque?')) {
                 respuestasUsuario = {};
                 preguntaActualIndex = 0;
@@ -1268,16 +1300,6 @@
         }
 
         function cerrarModal() { document.getElementById('modalConfirm').style.display = 'none'; }
-        function cerrarModalResultados() {
-            document.getElementById('modalResultados').style.display = 'none';
-            // Si se cerró el modal, volver a la selección
-            mostrarSeleccionBloques();
-        }
-
-        function volverASeleccion() {
-            document.getElementById('modalResultados').style.display = 'none';
-            mostrarSeleccionBloques();
-        }
 
         function corregirExamen() {
             cerrarModal();
@@ -1286,8 +1308,20 @@
             document.getElementById('btnToggleTimer').textContent = '⏱ Timer';
             document.getElementById('timerDisplay').style.display = 'none';
             examenCorregido = true;
+            actualizarBotonesHeader();
             renderizarExamen();
             mostrarResultados();
+        }
+
+        function revisarRespuestas() {
+            document.getElementById('modalResultados').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Ya estamos en modo revisión, el examen se renderizó con las correcciones
+        }
+
+        function volverASeleccion() {
+            document.getElementById('modalResultados').style.display = 'none';
+            mostrarSeleccionBloques();
         }
 
         function toggleSeleccionMultiple(indice, opcion) {
@@ -1405,7 +1439,7 @@
               <div class="card-header">
                 <span class="question-badge">Pregunta ${preguntaActualIndex + 1} de ${total}</span>
                 <span class="question-type">${multiple ? 'Selección múltiple' : 'Opción única'}</span>
-                <span>${respuestaSel !== undefined ? '✅ Respondida' : '❓ Sin responder'}</span>
+                <span>${respuestaSel !== undefined ? (examenCorregido ? (verificarRespuesta(preguntaActualIndex) ? '✅ Correcta' : '❌ Incorrecta') : '✅ Respondida') : '❓ Sin responder'}</span>
               </div>
               <p class="question-text">${pActual.pregunta}</p>
               <div class="options-list">${opcionesHTML}</div>
@@ -1438,13 +1472,12 @@
             const porcentaje = Math.round((correctas / total) * 100);
             const nota = (correctas / total) * 10;
 
-            // Guardar resultado del bloque actual
             resultadosBloques[bloqueActualIndex] = { correctas, total, incorrectas, porcentaje, nota };
 
             const titulo = document.getElementById('resultadosTitulo');
             titulo.textContent = `📊 Resultados Bloque ${bloqueActualIndex+1}`;
 
-            let resumenHTML = `
+            document.getElementById('resultadosContenido').innerHTML = `
             <div class="results-grid">
               <div class="result-card"><div class="result-value">${total}</div><div class="result-label">Total preguntas</div></div>
               <div class="result-card"><div class="result-value" style="color:var(--success);">${correctas}</div><div class="result-label">Correctas</div></div>
@@ -1453,8 +1486,6 @@
             </div>
             <div class="grade-circle">${nota.toFixed(1)}</div>
             <p style="margin-top:0.5rem;font-weight:600;">Nota sobre 10</p>`;
-
-            document.getElementById('resultadosContenido').innerHTML = resumenHTML;
             document.getElementById('modalResultados').style.display = 'flex';
         }
 
@@ -1467,6 +1498,8 @@
             const notaGlobal = (correctasGlobal / totalGlobal) * 10;
             const porcentajeGlobal = Math.round((correctasGlobal / totalGlobal) * 100);
 
+            bloqueActualIndex = -1;
+            actualizarBotonesHeader();
             const container = document.getElementById('mainContainer');
             container.innerHTML = `
             <div class="card" style="text-align:center;">
@@ -1538,9 +1571,9 @@
             if (saved) document.body.setAttribute('data-theme', saved);
         }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); cerrarModalResultados(); } });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); } });
         document.getElementById('modalConfirm').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModal(); });
-        document.getElementById('modalResultados').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModalResultados(); });
+        document.getElementById('modalResultados').addEventListener('click', e => { if (e.target === e.currentTarget) revisarRespuestas(); });
 
         inicializar();
     </script>
