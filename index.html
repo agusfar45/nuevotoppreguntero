@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Examen - Contratos (por bloques)</title>
+    <title>Simulador de Examen - Contratos (bloques de 10)</title>
     <style>
         :root {
             --bg: #fff5f7;
@@ -192,31 +193,39 @@
         .modal h3 { margin-bottom: 1rem; }
         .modal-buttons { display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
 
-        /* Pantalla de selección de bloque */
+        /* Pantalla de selección de bloques */
         .bloque-container {
             display: flex; flex-direction: column; align-items: center; gap: 2rem;
-            padding: 3rem 1rem; text-align: center;
+            padding: 2rem 1rem; text-align: center;
         }
-        .bloque-botones { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; }
+        .bloque-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem; width: 100%; max-width: 700px;
+        }
         .btn-bloque {
-            width: 220px; padding: 2rem 1rem; border-radius: 20px; font-size: 1.2rem;
-            font-weight: 700; background: var(--card-bg); border: 2px solid var(--border);
+            padding: 1.2rem 0.8rem; border-radius: 16px; font-size: 1rem;
+            font-weight: 600; background: var(--card-bg); border: 2px solid var(--border);
             color: var(--text); cursor: pointer; transition: all 0.3s;
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
         }
-        .btn-bloque:hover {
+        .btn-bloque:hover:not(.disabled) {
             border-color: var(--primary); background: var(--option-hover);
-            transform: translateY(-5px); box-shadow: 0 12px 30px rgba(214,51,132,0.2);
+            transform: translateY(-3px); box-shadow: 0 10px 25px rgba(214,51,132,0.15);
         }
-        .btn-bloque .emoji { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
-        .bloque-info { color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem; }
+        .btn-bloque.completado {
+            border-color: var(--success); background: var(--correct-bg); cursor: default;
+        }
+        .btn-bloque .emoji { font-size: 1.8rem; }
+        .btn-bloque .bloque-num { font-weight: 700; color: var(--primary); }
+        .btn-bloque .bloque-info { font-size: 0.85rem; color: var(--text-secondary); }
+        .btn-bloque .bloque-score { font-size: 0.85rem; color: var(--success); font-weight: 700; }
 
         @media (max-width: 600px) {
             .header { padding: 0.8rem 1rem; }
             .btn { padding: 0.45rem 0.9rem; font-size: 0.8rem; }
             .card { padding: 1.2rem; }
             .question-text { font-size: 1rem; }
-            .btn-bloque { width: 180px; padding: 1.5rem 1rem; }
+            .bloque-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
         }
     </style>
 </head>
@@ -256,14 +265,14 @@
             <div id="resultadosContenido"></div>
             <div class="modal-buttons" id="resultadosBotones">
                 <button class="btn btn-primary" onclick="cerrarModalResultados()">Revisar respuestas</button>
-                <button class="btn btn-outline" id="btnSiguienteBloque" style="display:none;" onclick="siguienteBloque()">▶ Siguiente bloque</button>
+                <button class="btn btn-outline" onclick="volverASeleccion()">📋 Volver a selección</button>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // 🚨 BANCO DE PREGUNTAS - DERECHO DE CONTRATOS (95 preguntas)
+        // 🚨 BANCO DE PREGUNTAS (95 preguntas - REEMPLAZAR CON TODAS)
         // ============================================
         const bancoPreguntas = [    
             {
@@ -1122,17 +1131,21 @@
                 correcta: "Contratos tipos"
             }
         ];
+
         // ============================================
         // FIN DEL BANCO DE PREGUNTAS
         // ============================================
 
-        // División del banco en dos bloques
-        const mitad = Math.ceil(bancoPreguntas.length / 2); // 48
-        const bloque1Preguntas = bancoPreguntas.slice(0, mitad);
-        const bloque2Preguntas = bancoPreguntas.slice(mitad);
+        // Crear bloques de a 10 preguntas
+        const BLOQUE_SIZE = 10;
+        const bloques = [];
+        for (let i = 0; i < bancoPreguntas.length; i += BLOQUE_SIZE) {
+            bloques.push(bancoPreguntas.slice(i, i + BLOQUE_SIZE));
+        }
+        // bloques ahora es un array de arrays: [bloque1 (10 preg), bloque2 (10 preg), ..., bloque9 (10 preg), bloque10 (5 preg)]
 
         // Estado global
-        let bloqueActual = null; // 1 o 2
+        let bloqueActualIndex = -1; // índice del bloque seleccionado (-1 = ninguno)
         let examenActual = [];
         let respuestasUsuario = {};
         let examenCorregido = false;
@@ -1141,45 +1154,51 @@
         let timerInterval = null;
         let preguntaActualIndex = 0;
 
-        // Resultados acumulados
-        let resultadoBloque1 = null;
-        let resultadoBloque2 = null;
+        // Resultados acumulados por bloque (cada elemento: { correctas, total, ... } o null si no hecho)
+        let resultadosBloques = new Array(bloques.length).fill(null);
 
         function inicializar() {
             cargarTema();
-            mostrarSeleccionBloque();
+            mostrarSeleccionBloques();
         }
 
-        function mostrarSeleccionBloque() {
-            bloqueActual = null;
-            resultadoBloque1 = null;
-            resultadoBloque2 = null;
+        function mostrarSeleccionBloques() {
+            // Limpiar estado del examen
+            bloqueActualIndex = -1;
             detenerTemporizador();
             document.getElementById('timerDisplay').style.display = 'none';
             document.getElementById('btnToggleTimer').textContent = '⏱ Timer';
 
+            let htmlBloques = '';
+            for (let i = 0; i < bloques.length; i++) {
+                const num = i + 1;
+                const total = bloques[i].length;
+                const completado = resultadosBloques[i] !== null;
+                let clase = 'btn-bloque' + (completado ? ' completado' : '');
+                let contenido = `<span class="emoji">${completado ? '✅' : '📖'}</span>`;
+                contenido += `<span class="bloque-num">Bloque ${num}</span>`;
+                contenido += `<span class="bloque-info">${total} preguntas</span>`;
+                if (completado) {
+                    contenido += `<span class="bloque-score">${resultadosBloques[i].correctas}/${resultadosBloques[i].total}</span>`;
+                }
+                htmlBloques += `<button class="${clase}" ${!completado ? `onclick="seleccionarBloque(${i})"` : 'disabled'} title="${completado ? 'Ya realizado' : 'Comenzar bloque'}">${contenido}</button>`;
+            }
+
             const container = document.getElementById('mainContainer');
             container.innerHTML = `
             <div class="bloque-container">
-              <h2 style="color: var(--primary);">📚 Seleccioná con qué bloque comenzar</h2>
-              <p style="color: var(--text-secondary);">Cada bloque se corrige por separado. Al finalizar ambos, verás el resultado total.</p>
-              <div class="bloque-botones">
-                <button class="btn-bloque" onclick="seleccionarBloque(1)">
-                  <span class="emoji">📖</span> Bloque 1
-                  <div class="bloque-info">${bloque1Preguntas.length} preguntas</div>
-                </button>
-                <button class="btn-bloque" onclick="seleccionarBloque(2)">
-                  <span class="emoji">📘</span> Bloque 2
-                  <div class="bloque-info">${bloque2Preguntas.length} preguntas</div>
-                </button>
-              </div>
+              <h2 style="color: var(--primary);">📚 Seleccioná un bloque para comenzar</h2>
+              <p style="color: var(--text-secondary);">Completá todos los bloques para obtener tu nota final. Podés hacerlos en cualquier orden.</p>
+              <div class="bloque-grid">${htmlBloques}</div>
+              ${resultadosBloques.every(r => r !== null) ? `
+                <div style="margin-top:1rem;">
+                  <button class="btn btn-primary" onclick="mostrarResumenFinal()">🏆 Ver resumen final</button>
+                </div>` : ''}
             </div>`;
         }
 
-        function seleccionarBloque(numero) {
-            bloqueActual = numero;
-            resultadoBloque1 = (numero === 1 && resultadoBloque1) ? resultadoBloque1 : null;
-            resultadoBloque2 = (numero === 2 && resultadoBloque2) ? resultadoBloque2 : null;
+        function seleccionarBloque(index) {
+            bloqueActualIndex = index;
             generarNuevoExamen();
         }
 
@@ -1193,8 +1212,8 @@
         }
 
         function generarNuevoExamen() {
-            if (!bloqueActual) {
-                mostrarSeleccionBloque();
+            if (bloqueActualIndex === -1) {
+                mostrarSeleccionBloques();
                 return;
             }
             detenerTemporizador();
@@ -1208,7 +1227,7 @@
             respuestasUsuario = {};
             preguntaActualIndex = 0;
 
-            const preguntasFuente = bloqueActual === 1 ? bloque1Preguntas : bloque2Preguntas;
+            const preguntasFuente = bloques[bloqueActualIndex];
             examenActual = fisherYatesShuffle(preguntasFuente);
             examenActual = examenActual.map(p => {
                 const opcionesOriginales = [...p.opciones];
@@ -1224,15 +1243,15 @@
         }
 
         function nuevoExamen() {
-            if (!bloqueActual) return;
+            if (bloqueActualIndex === -1) return;
             if (temporizadorActivo || Object.keys(respuestasUsuario).length > 0) {
                 if (confirm('¿Generar un nuevo examen para este bloque? Perderás las respuestas actuales.')) generarNuevoExamen();
             } else generarNuevoExamen();
         }
 
         function reiniciarRespuestas() {
-            if (!bloqueActual) return;
-            if (examenCorregido) return alert('Este bloque ya fue corregido. Generá uno nuevo o pasá al siguiente bloque.');
+            if (bloqueActualIndex === -1) return;
+            if (examenCorregido) return alert('Este bloque ya fue corregido. Volvé a la selección para hacer otro.');
             if (confirm('¿Borrar todas tus respuestas de este bloque?')) {
                 respuestasUsuario = {};
                 preguntaActualIndex = 0;
@@ -1241,7 +1260,7 @@
         }
 
         function confirmarCorreccion() {
-            if (!bloqueActual || examenCorregido) return;
+            if (bloqueActualIndex === -1 || examenCorregido) return;
             const respondidas = Object.keys(respuestasUsuario).length;
             const total = examenActual.length;
             if (respondidas < total && !confirm(`Solo has respondido ${respondidas} de ${total} preguntas. Las no respondidas se considerarán incorrectas. ¿Continuar?`)) return;
@@ -1251,10 +1270,13 @@
         function cerrarModal() { document.getElementById('modalConfirm').style.display = 'none'; }
         function cerrarModalResultados() {
             document.getElementById('modalResultados').style.display = 'none';
-            // Si ya completó ambos bloques, volver a selección
-            if (resultadoBloque1 && resultadoBloque2) {
-                mostrarSeleccionBloque();
-            }
+            // Si se cerró el modal, volver a la selección
+            mostrarSeleccionBloques();
+        }
+
+        function volverASeleccion() {
+            document.getElementById('modalResultados').style.display = 'none';
+            mostrarSeleccionBloques();
         }
 
         function corregirExamen() {
@@ -1266,15 +1288,6 @@
             examenCorregido = true;
             renderizarExamen();
             mostrarResultados();
-        }
-
-        function siguienteBloque() {
-            document.getElementById('modalResultados').style.display = 'none';
-            if (bloqueActual === 1) {
-                seleccionarBloque(2);
-            } else {
-                seleccionarBloque(1);
-            }
         }
 
         function toggleSeleccionMultiple(indice, opcion) {
@@ -1312,8 +1325,8 @@
         }
 
         function renderizarExamen() {
-            if (!bloqueActual) {
-                mostrarSeleccionBloque();
+            if (bloqueActualIndex === -1) {
+                mostrarSeleccionBloques();
                 return;
             }
             const container = document.getElementById('mainContainer');
@@ -1385,7 +1398,7 @@
             container.innerHTML = `
             <div class="progress-container">
               <div class="progress-bar-outer"><div class="progress-bar-inner" style="width:${porcentaje}%;"></div></div>
-              <div class="progress-label"><span>Progreso Bloque ${bloqueActual}: ${respondidas}/${total}</span><span>${porcentaje}%</span></div>
+              <div class="progress-label"><span>Bloque ${bloqueActualIndex+1} — ${respondidas}/${total} respondidas</span><span>${porcentaje}%</span></div>
             </div>
             <div class="nav-dots">${dotsHTML}</div>
             <div class="card">
@@ -1426,12 +1439,10 @@
             const nota = (correctas / total) * 10;
 
             // Guardar resultado del bloque actual
-            const resultado = { correctas, total, incorrectas, porcentaje, nota };
-            if (bloqueActual === 1) resultadoBloque1 = resultado;
-            else resultadoBloque2 = resultado;
+            resultadosBloques[bloqueActualIndex] = { correctas, total, incorrectas, porcentaje, nota };
 
             const titulo = document.getElementById('resultadosTitulo');
-            titulo.textContent = `📊 Resultados Bloque ${bloqueActual}`;
+            titulo.textContent = `📊 Resultados Bloque ${bloqueActualIndex+1}`;
 
             let resumenHTML = `
             <div class="results-grid">
@@ -1443,36 +1454,39 @@
             <div class="grade-circle">${nota.toFixed(1)}</div>
             <p style="margin-top:0.5rem;font-weight:600;">Nota sobre 10</p>`;
 
-            // Si ambos bloques completos, agregar resumen total
-            if (resultadoBloque1 && resultadoBloque2) {
-                const totalGlobal = resultadoBloque1.total + resultadoBloque2.total;
-                const correctasGlobal = resultadoBloque1.correctas + resultadoBloque2.correctas;
-                const notaGlobal = (correctasGlobal / totalGlobal) * 10;
-                resumenHTML += `
-                <hr style="margin:1.5rem 0; border-color: var(--border);">
-                <h4 style="color:var(--primary);">🏆 Resultado Final (ambos bloques)</h4>
-                <div class="results-grid">
-                  <div class="result-card"><div class="result-value">${totalGlobal}</div><div class="result-label">Total</div></div>
-                  <div class="result-card"><div class="result-value" style="color:var(--success);">${correctasGlobal}</div><div class="result-label">Correctas</div></div>
-                  <div class="result-card"><div class="result-value">${Math.round((correctasGlobal / totalGlobal) * 100)}%</div><div class="result-label">Aciertos</div></div>
-                </div>
-                <div class="grade-circle">${notaGlobal.toFixed(1)}</div>
-                <p style="margin-top:0.5rem;font-weight:600;">Nota final sobre 10</p>`;
-                // Ocultar botón de siguiente
-                document.getElementById('btnSiguienteBloque').style.display = 'none';
-            } else {
-                // Mostrar botón para ir al otro bloque
-                document.getElementById('btnSiguienteBloque').style.display = 'inline-flex';
-                document.getElementById('btnSiguienteBloque').textContent = bloqueActual === 1 ? '▶ Ir al Bloque 2' : '▶ Ir al Bloque 1';
-            }
-
             document.getElementById('resultadosContenido').innerHTML = resumenHTML;
             document.getElementById('modalResultados').style.display = 'flex';
         }
 
+        function mostrarResumenFinal() {
+            const totalGlobal = bancoPreguntas.length;
+            let correctasGlobal = 0;
+            for (const res of resultadosBloques) {
+                if (res) correctasGlobal += res.correctas;
+            }
+            const notaGlobal = (correctasGlobal / totalGlobal) * 10;
+            const porcentajeGlobal = Math.round((correctasGlobal / totalGlobal) * 100);
+
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = `
+            <div class="card" style="text-align:center;">
+              <h2 style="color:var(--primary);">🏆 Resultado Final</h2>
+              <div class="results-grid">
+                <div class="result-card"><div class="result-value">${totalGlobal}</div><div class="result-label">Total preguntas</div></div>
+                <div class="result-card"><div class="result-value" style="color:var(--success);">${correctasGlobal}</div><div class="result-label">Correctas</div></div>
+                <div class="result-card"><div class="result-value">${porcentajeGlobal}%</div><div class="result-label">Aciertos</div></div>
+              </div>
+              <div class="grade-circle">${notaGlobal.toFixed(1)}</div>
+              <p style="font-weight:600;">Nota final sobre 10</p>
+              <p style="color:var(--text-secondary);">¡Excelente trabajo!</p>
+              <button class="btn btn-primary" style="margin-top:1rem;" onclick="mostrarSeleccionBloques()">📋 Volver a la selección</button>
+            </div>`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         // --- Temporizador ---
         function toggleTimer() {
-            if (!bloqueActual || examenCorregido) return;
+            if (bloqueActualIndex === -1 || examenCorregido) return;
             if (temporizadorActivo) {
                 detenerTemporizador();
                 temporizadorActivo = false;
